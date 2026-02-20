@@ -1,0 +1,229 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ────────────────────────────────────────────────
+
+enum Role {
+  MEMBER
+  COORDINATOR
+  PRODUCER
+}
+
+enum UserStatus {
+  PENDING
+  ACTIVE
+  INACTIVE
+}
+
+enum UnitType {
+  CRATE
+  KG
+  UNIT
+  LITER
+}
+
+enum GroupOrderStatus {
+  DRAFT
+  OPEN
+  CLOSED
+  DELIVERED
+}
+
+enum PaymentStatus {
+  NOT_PAID
+  PARTIAL
+  PAID
+}
+
+// ─── Models ───────────────────────────────────────────────
+
+model User {
+  id             String     @id @default(cuid())
+  email          String     @unique
+  name           String
+  commune        String?
+  hashedPassword String?
+  role           Role       @default(MEMBER)
+  status         UserStatus @default(PENDING)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  // Relations
+  memberOrders         MemberOrder[]
+  producer             Producer?
+  groupOrdersCreated   GroupOrder[] @relation("CreatedBy")
+  groupOrdersTransport GroupOrder[] @relation("TransportBy")
+
+  // NextAuth
+  accounts Account[]
+  sessions Session[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model DeliveryPoint {
+  id       String  @id @default(cuid())
+  name     String
+  address  String
+  commune  String
+  isActive Boolean @default(true)
+
+  memberOrders MemberOrder[]
+  groupOrders  GroupOrder[]  @relation("GroupOrderDeliveryPoints")
+
+  @@map("delivery_points")
+}
+
+model Producer {
+  id           String  @id @default(cuid())
+  name         String
+  description  String?
+  location     String?
+  contactEmail String?
+  isActive     Boolean @default(true)
+  userId       String? @unique
+
+  user        User?        @relation(fields: [userId], references: [id])
+  products    Product[]
+  groupOrders GroupOrder[]
+
+  @@map("producers")
+}
+
+model Product {
+  id                 String   @id @default(cuid())
+  name               String
+  description        String?
+  producerId         String
+  unitType           UnitType
+  unitQuantity       Float
+  priceProducer      Decimal  @db.Decimal(10, 2)
+  priceWithTransport Decimal  @db.Decimal(10, 2)
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  producer           Producer           @relation(fields: [producerId], references: [id])
+  groupOrderProducts GroupOrderProduct[]
+
+  @@map("products")
+}
+
+model GroupOrder {
+  id              String           @id @default(cuid())
+  producerId      String
+  title           String
+  openDate        DateTime
+  closeDate       DateTime
+  deliveryDate    DateTime
+  status          GroupOrderStatus @default(DRAFT)
+  notes           String?
+  minOrderAmount  Decimal?         @db.Decimal(10, 2)
+  transportUserId String?
+  createdBy       String
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  producer       Producer           @relation(fields: [producerId], references: [id])
+  creator        User               @relation("CreatedBy", fields: [createdBy], references: [id])
+  transportUser  User?              @relation("TransportBy", fields: [transportUserId], references: [id])
+  products       GroupOrderProduct[]
+  memberOrders   MemberOrder[]
+  deliveryPoints DeliveryPoint[]    @relation("GroupOrderDeliveryPoints")
+
+  @@map("group_orders")
+}
+
+model GroupOrderProduct {
+  id            String   @id @default(cuid())
+  groupOrderId  String
+  productId     String
+  priceOverride Decimal? @db.Decimal(10, 2)
+
+  groupOrder GroupOrder  @relation(fields: [groupOrderId], references: [id], onDelete: Cascade)
+  product    Product     @relation(fields: [productId], references: [id])
+  orderLines OrderLine[]
+
+  @@unique([groupOrderId, productId])
+  @@map("group_order_products")
+}
+
+model MemberOrder {
+  id              String        @id @default(cuid())
+  groupOrderId    String
+  userId          String
+  deliveryPointId String
+  totalAmount     Decimal       @default(0) @db.Decimal(10, 2)
+  paymentStatus   PaymentStatus @default(NOT_PAID)
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  groupOrder    GroupOrder    @relation(fields: [groupOrderId], references: [id])
+  user          User          @relation(fields: [userId], references: [id])
+  deliveryPoint DeliveryPoint @relation(fields: [deliveryPointId], references: [id])
+  orderLines    OrderLine[]
+
+  @@unique([groupOrderId, userId])
+  @@map("member_orders")
+}
+
+model OrderLine {
+  id                  String  @id @default(cuid())
+  memberOrderId       String
+  groupOrderProductId String
+  quantity            Float
+  unitPrice           Decimal @db.Decimal(10, 2)
+  lineTotal           Decimal @db.Decimal(10, 2)
+
+  memberOrder       MemberOrder       @relation(fields: [memberOrderId], references: [id], onDelete: Cascade)
+  groupOrderProduct GroupOrderProduct @relation(fields: [groupOrderProductId], references: [id])
+
+  @@map("order_lines")
+}

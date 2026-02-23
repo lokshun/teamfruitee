@@ -1,23 +1,27 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { memberOrderSchema } from "@/lib/validations/order"
+import { proxyOrderSchema } from "@/lib/validations/order"
 import { computeLineTotal, computeOrderTotal } from "@/lib/price-utils"
 import type { Prisma } from "@/generated/prisma/client"
 
-export async function POST(req: Request) {
+export async function POST(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   const session = await auth()
-  if (!session || session.user.role !== "MEMBER" || session.user.status !== "ACTIVE") {
+  if (!session || session.user.role !== "COORDINATOR") {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 })
   }
 
+  const { id: groupOrderId } = await params
   const body = await req.json()
-  const parsed = memberOrderSchema.safeParse(body)
+  const parsed = proxyOrderSchema.safeParse(body)
   if (!parsed.success) {
     return NextResponse.json({ error: "Données invalides", details: parsed.error.flatten() }, { status: 400 })
   }
 
-  const { groupOrderId, deliveryPointId, notes, lines } = parsed.data
+  const { userId, proxyBuyerName, deliveryPointId, notes, lines } = parsed.data
 
   try {
     const memberOrder = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
@@ -33,21 +37,22 @@ export async function POST(req: Request) {
         throw new Error("GROUP_ORDER_NOT_OPEN")
       }
 
-      if (new Date() > groupOrder.closeDate) {
-        throw new Error("GROUP_ORDER_EXPIRED")
-      }
-
-      // Vérifier qu'une commande n'existe pas déjà (index partiel SQL, pas de findUnique Prisma)
-      const existing = await tx.memberOrder.findFirst({
-        where: { groupOrderId, userId: session.user.id },
-      })
-      if (existing) {
-        throw new Error("ORDER_ALREADY_EXISTS")
+      // Vérifier qu'une commande n'existe pas déjà pour ce membre (si userId fourni)
+      if (userId) {
+        const existing = await tx.memberOrder.findFirst({
+          where: { groupOrderId, userId },
+        })
+        if (existing) {
+          throw new Error("ORDER_ALREADY_EXISTS")
+        }
       }
 
       // Préparer les lignes avec snapshot des prix
       const linesWithPrices = lines.map((line) => {
-        const gop = groupOrder.products.find((p: { id: string; priceOverride: unknown; product: { priceWithTransport: unknown } }) => p.id === line.groupOrderProductId)
+        const gop = groupOrder.products.find(
+          (p: { id: string; priceOverride: unknown; product: { priceWithTransport: unknown } }) =>
+            p.id === line.groupOrderProductId
+        )
         if (!gop) throw new Error(`PRODUCT_NOT_FOUND:${line.groupOrderProductId}`)
 
         const unitPrice = Number(gop.priceOverride ?? gop.product.priceWithTransport)
@@ -68,7 +73,9 @@ export async function POST(req: Request) {
       const order = await tx.memberOrder.create({
         data: {
           groupOrderId,
-          userId: session.user.id,
+          userId: userId ?? null,
+          proxyBuyerName: proxyBuyerName ?? null,
+          placedByCoordinatorId: session.user.id,
           deliveryPointId,
           notes,
           totalAmount,
@@ -79,6 +86,7 @@ export async function POST(req: Request) {
         include: {
           orderLines: true,
           deliveryPoint: { select: { name: true } },
+          user: { select: { id: true, name: true } },
         },
       })
 
@@ -91,13 +99,10 @@ export async function POST(req: Request) {
     if (message === "GROUP_ORDER_NOT_OPEN") {
       return NextResponse.json({ error: "Cette commande groupée n'est pas ouverte." }, { status: 409 })
     }
-    if (message === "GROUP_ORDER_EXPIRED") {
-      return NextResponse.json({ error: "La date de clôture est dépassée." }, { status: 409 })
-    }
     if (message === "ORDER_ALREADY_EXISTS") {
-      return NextResponse.json({ error: "Vous avez déjà passé une commande." }, { status: 409 })
+      return NextResponse.json({ error: "Ce membre a déjà une commande pour cette commande groupée." }, { status: 409 })
     }
-    console.error("[MEMBER_ORDER_POST]", error)
+    console.error("[COORDINATOR_PROXY_ORDER_POST]", error)
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 })
   }
 }

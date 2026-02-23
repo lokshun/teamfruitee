@@ -7,6 +7,7 @@ const memberNavItems = [
   { href: "/member/commandes", label: "Mes commandes" },
   { href: "/member/calendrier", label: "Calendrier" },
   { href: "/member/historique", label: "Historique" },
+  { href: "/member/documents", label: "Documents" },
 ]
 
 export default async function MemberLayout({
@@ -23,7 +24,7 @@ export default async function MemberLayout({
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar items={memberNavItems} userName={session.user.name} />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
         {children}
       </main>
     </div>

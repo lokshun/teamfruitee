@@ -32,12 +32,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Données invalides", details: parsed.error.flatten() }, { status: 400 })
   }
 
-  const { productIds, deliveryPointIds, ...orderData } = parsed.data
+  const { productIds, deliveryPointIds, paymentReferentIds, ...orderData } = parsed.data
 
   try {
     // Prisma ne permet pas de mélanger FK bruts (mode Unchecked) et relations
     // many-to-many implicites dans un même create. On crée d'abord la commande,
-    // puis on connecte les points de livraison dans la même transaction.
+    // puis on connecte les points de livraison et référents paiement dans la même transaction.
     const groupOrder = await prisma.$transaction(async (tx) => {
       const created = await tx.groupOrder.create({
         data: {
@@ -57,12 +57,22 @@ export async function POST(req: Request) {
       })
 
       // Prisma v7 : les relations M2M implicites ne fonctionnent pas via l'API
-      // Prisma en mode Unchecked. On insère directement dans la table de jointure.
+      // Prisma en mode Unchecked. On insère directement dans les tables de jointure.
       if (deliveryPointIds && deliveryPointIds.length > 0) {
         for (const dpId of deliveryPointIds) {
           await tx.$executeRaw`
             INSERT INTO "_GroupOrderDeliveryPoints" ("A", "B")
             VALUES (${dpId}, ${created.id})
+            ON CONFLICT DO NOTHING
+          `
+        }
+      }
+
+      if (paymentReferentIds && paymentReferentIds.length > 0) {
+        for (const userId of paymentReferentIds) {
+          await tx.$executeRaw`
+            INSERT INTO "_PaymentReferents" ("A", "B")
+            VALUES (${created.id}, ${userId})
             ON CONFLICT DO NOTHING
           `
         }

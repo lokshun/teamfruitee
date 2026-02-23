@@ -47,8 +47,8 @@ export async function getGroupOrderExportData(groupOrderId: string): Promise<Gro
     producerName: groupOrder.producer.name,
     deliveryDate: groupOrder.deliveryDate,
     memberOrders: groupOrder.memberOrders.map((mo) => ({
-      memberName: mo.user.name,
-      commune: mo.user.commune,
+      memberName: mo.user?.name ?? mo.proxyBuyerName ?? "Acheteur",
+      commune: mo.user?.commune ?? null,
       deliveryPoint: mo.deliveryPoint.name,
       lines: mo.orderLines.map((ol) => ({
         productName: ol.groupOrderProduct.product.name,

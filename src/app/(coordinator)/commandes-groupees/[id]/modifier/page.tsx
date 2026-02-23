@@ -22,7 +22,7 @@ export default async function ModifierCommandeGroupeePage({
         closeDate: true,
         deliveryDate: true,
         notes: true,
-        minOrderAmount: true,
+        minOrderQuantity: true,
         transportUserId: true,
         producer: {
           select: {
@@ -41,6 +41,7 @@ export default async function ModifierCommandeGroupeePage({
           },
         },
         deliveryPoints: { select: { id: true } },
+        paymentReferents: { select: { id: true } },
         products: {
           select: {
             id: true,
@@ -105,9 +106,10 @@ export default async function ModifierCommandeGroupeePage({
               closeDate: groupOrder.closeDate,
               deliveryDate: groupOrder.deliveryDate,
               notes: groupOrder.notes,
-              minOrderAmount: groupOrder.minOrderAmount ? Number(groupOrder.minOrderAmount) : null,
+              minOrderQuantity: groupOrder.minOrderQuantity ?? null,
               transportUserId: groupOrder.transportUserId ?? null,
               deliveryPointIds: groupOrder.deliveryPoints.map((dp) => dp.id),
+              paymentReferentIds: groupOrder.paymentReferents.map((r) => r.id),
               currentProductIds,
               orderedProductIds,
             }}

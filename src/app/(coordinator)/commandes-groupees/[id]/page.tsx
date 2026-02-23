@@ -31,6 +31,7 @@ export default async function GroupOrderDetailPage({
       products: { include: { product: true } },
       transportUser: { select: { name: true } },
       deliveryPoints: { select: { id: true, name: true, commune: true } },
+      paymentReferents: { select: { id: true, name: true } },
       memberOrders: {
         include: {
           user: { select: { name: true, commune: true } },
@@ -50,6 +51,11 @@ export default async function GroupOrderDetailPage({
 
   const grandTotal = groupOrder.memberOrders.reduce(
     (sum, mo) => sum + Number(mo.totalAmount),
+    0
+  )
+
+  const grandTotalQty = groupOrder.memberOrders.reduce(
+    (sum, mo) => sum + mo.orderLines.reduce((s, l) => s + l.quantity, 0),
     0
   )
 
@@ -83,7 +89,7 @@ export default async function GroupOrderDetailPage({
           <h1 className="text-2xl font-bold text-gray-900 mt-1">{groupOrder.title}</h1>
           <p className="text-gray-500">{groupOrder.producer.name}</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap justify-end">
           <span
             className="px-3 py-1 rounded-full text-sm font-medium"
             style={{
@@ -99,6 +105,14 @@ export default async function GroupOrderDetailPage({
               className="px-3 py-1.5 text-sm bg-gray-50 text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-100"
             >
               Modifier
+            </Link>
+          )}
+          {groupOrder.status === "OPEN" && (
+            <Link
+              href={`/commandes-groupees/${id}/commander`}
+              className="px-3 py-1.5 text-sm bg-blue-50 text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-100"
+            >
+              Commander pour des acheteurs
             </Link>
           )}
           <a
@@ -131,8 +145,8 @@ export default async function GroupOrderDetailPage({
         ))}
       </div>
 
-      {/* Infos : transport + montant minimum */}
-      {(groupOrder.transportUser || groupOrder.minOrderAmount) && (
+      {/* Infos : transport + quantité minimum + référents paiement */}
+      {(groupOrder.transportUser || groupOrder.minOrderQuantity || groupOrder.paymentReferents.length > 0) && (
         <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-3">
           {groupOrder.transportUser && (
             <div className="flex items-center gap-2 text-sm">
@@ -140,16 +154,28 @@ export default async function GroupOrderDetailPage({
               <span className="font-medium text-gray-900">{groupOrder.transportUser.name}</span>
             </div>
           )}
-          {groupOrder.minOrderAmount && (() => {
-            const min = Number(groupOrder.minOrderAmount)
-            const pct = Math.min(100, Math.round((grandTotal / min) * 100))
-            const reached = grandTotal >= min
+          {groupOrder.paymentReferents.length > 0 && (
+            <div className="flex items-start gap-2 text-sm">
+              <span className="text-gray-400 shrink-0">Référents paiement :</span>
+              <div className="flex flex-wrap gap-1">
+                {groupOrder.paymentReferents.map((r) => (
+                  <span key={r.id} className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full text-xs font-medium">
+                    {r.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+          {groupOrder.minOrderQuantity && (() => {
+            const min = groupOrder.minOrderQuantity as number
+            const pct = Math.min(100, Math.round((grandTotalQty / min) * 100))
+            const reached = grandTotalQty >= min
             return (
               <div>
                 <div className="flex items-center justify-between text-sm mb-1">
-                  <span className="text-gray-400">Montant minimum de commande</span>
+                  <span className="text-gray-400">Quantité minimum de commande</span>
                   <span className={reached ? "font-medium text-green-700" : "font-medium text-amber-700"}>
-                    {formatCurrency(grandTotal)} / {formatCurrency(min)}
+                    {grandTotalQty} / {min} unités
                     {reached ? " ✓ Atteint" : ` (${pct}%)`}
                   </span>
                 </div>
@@ -242,30 +268,44 @@ export default async function GroupOrderDetailPage({
           </h2>
         </div>
         <div className="divide-y divide-gray-100">
-          {groupOrder.memberOrders.map((mo) => (
-            <div key={mo.id} className="p-5">
-              <div className="flex items-center justify-between mb-2">
-                <div>
-                  <p className="font-semibold text-gray-900">
-                    {mo.user.name} {mo.user.commune ? `(${mo.user.commune})` : ""}
-                  </p>
-                  <p className="text-sm text-gray-500">📦 {mo.deliveryPoint.name}</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <p className="font-bold text-gray-900">{formatCurrency(Number(mo.totalAmount))}</p>
-                  <PaymentStatusToggle orderId={mo.id} currentStatus={mo.paymentStatus} />
-                </div>
-              </div>
-              <div className="text-sm text-gray-600 space-y-0.5">
-                {mo.orderLines.map((line) => (
-                  <div key={line.id} className="flex justify-between">
-                    <span>{line.groupOrderProduct.product.name} ×{line.quantity}</span>
-                    <span>{formatCurrency(Number(line.lineTotal))}</span>
+          {groupOrder.memberOrders.map((mo) => {
+            const isProxy = !mo.userId
+            const buyerName = isProxy
+              ? (mo.proxyBuyerName ?? "Acheteur sans compte")
+              : (mo.user?.name ?? "Membre inconnu")
+            const buyerCommune = mo.user?.commune
+
+            return (
+              <div key={mo.id} className="p-5">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <p className="font-semibold text-gray-900 flex items-center gap-2">
+                      {buyerName}
+                      {buyerCommune ? ` (${buyerCommune})` : ""}
+                      {isProxy && (
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700">
+                          proxy
+                        </span>
+                      )}
+                    </p>
+                    <p className="text-sm text-gray-500">📦 {mo.deliveryPoint.name}</p>
                   </div>
-                ))}
+                  <div className="flex items-center gap-3">
+                    <p className="font-bold text-gray-900">{formatCurrency(Number(mo.totalAmount))}</p>
+                    <PaymentStatusToggle orderId={mo.id} currentStatus={mo.paymentStatus} />
+                  </div>
+                </div>
+                <div className="text-sm text-gray-600 space-y-0.5">
+                  {mo.orderLines.map((line) => (
+                    <div key={line.id} className="flex justify-between">
+                      <span>{line.groupOrderProduct.product.name} ×{line.quantity}</span>
+                      <span>{formatCurrency(Number(line.lineTotal))}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
           {groupOrder.memberOrders.length === 0 && (
             <p className="px-5 py-8 text-center text-gray-400">Aucune commande pour l&apos;instant.</p>
           )}

@@ -55,14 +55,19 @@ model User {
   updatedAt      DateTime   @updatedAt
 
   // Relations
-  memberOrders         MemberOrder[]
-  producer             Producer?
-  groupOrdersCreated   GroupOrder[] @relation("CreatedBy")
-  groupOrdersTransport GroupOrder[] @relation("TransportBy")
+  memberOrders                MemberOrder[] @relation("MemberOrderUser")
+  ordersPlacedAsCoordinator   MemberOrder[] @relation("PlacedByCoordinator")
+  paymentReferentFor          GroupOrder[]  @relation("PaymentReferents")
+  producer                    Producer?
+  groupOrdersCreated          GroupOrder[]  @relation("CreatedBy")
+  groupOrdersTransport        GroupOrder[]  @relation("TransportBy")
 
   // NextAuth
   accounts Account[]
   sessions Session[]
+
+  // Documents
+  documentsAdded Document[]
 
   @@map("users")
 }
@@ -156,26 +161,27 @@ model Product {
 }
 
 model GroupOrder {
-  id              String           @id @default(cuid())
-  producerId      String
-  title           String
-  openDate        DateTime
-  closeDate       DateTime
-  deliveryDate    DateTime
-  status          GroupOrderStatus @default(DRAFT)
-  notes           String?
-  minOrderAmount  Decimal?         @db.Decimal(10, 2)
-  transportUserId String?
-  createdBy       String
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  id               String           @id @default(cuid())
+  producerId       String
+  title            String
+  openDate         DateTime
+  closeDate        DateTime
+  deliveryDate     DateTime
+  status           GroupOrderStatus @default(DRAFT)
+  notes            String?
+  minOrderQuantity Int?
+  transportUserId  String?
+  createdBy        String
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
 
-  producer       Producer           @relation(fields: [producerId], references: [id])
-  creator        User               @relation("CreatedBy", fields: [createdBy], references: [id])
-  transportUser  User?              @relation("TransportBy", fields: [transportUserId], references: [id])
-  products       GroupOrderProduct[]
-  memberOrders   MemberOrder[]
-  deliveryPoints DeliveryPoint[]    @relation("GroupOrderDeliveryPoints")
+  producer         Producer           @relation(fields: [producerId], references: [id])
+  creator          User               @relation("CreatedBy", fields: [createdBy], references: [id])
+  transportUser    User?              @relation("TransportBy", fields: [transportUserId], references: [id])
+  products         GroupOrderProduct[]
+  memberOrders     MemberOrder[]
+  deliveryPoints   DeliveryPoint[]    @relation("GroupOrderDeliveryPoints")
+  paymentReferents User[]             @relation("PaymentReferents")
 
   @@map("group_orders")
 }
@@ -195,22 +201,24 @@ model GroupOrderProduct {
 }
 
 model MemberOrder {
-  id              String        @id @default(cuid())
-  groupOrderId    String
-  userId          String
-  deliveryPointId String
-  totalAmount     Decimal       @default(0) @db.Decimal(10, 2)
-  paymentStatus   PaymentStatus @default(NOT_PAID)
-  notes           String?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  id                    String        @id @default(cuid())
+  groupOrderId          String
+  userId                String?
+  proxyBuyerName        String?
+  placedByCoordinatorId String?
+  deliveryPointId       String
+  totalAmount           Decimal       @default(0) @db.Decimal(10, 2)
+  paymentStatus         PaymentStatus @default(NOT_PAID)
+  notes                 String?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
 
   groupOrder    GroupOrder    @relation(fields: [groupOrderId], references: [id])
-  user          User          @relation(fields: [userId], references: [id])
+  user          User?         @relation("MemberOrderUser", fields: [userId], references: [id])
+  coordinator   User?         @relation("PlacedByCoordinator", fields: [placedByCoordinatorId], references: [id])
   deliveryPoint DeliveryPoint @relation(fields: [deliveryPointId], references: [id])
   orderLines    OrderLine[]
 
-  @@unique([groupOrderId, userId])
   @@map("member_orders")
 }
 
@@ -226,4 +234,22 @@ model OrderLine {
   groupOrderProduct GroupOrderProduct @relation(fields: [groupOrderProductId], references: [id])
 
   @@map("order_lines")
+}
+
+model Document {
+  id           String   @id @default(cuid())
+  title        String
+  description  String?
+  shareUrl     String
+  fileName     String
+  mimeType     String
+  fileSize     Int?
+  allowedRoles String[]
+  addedBy      String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  addedByUser User @relation(fields: [addedBy], references: [id])
+
+  @@map("documents")
 }

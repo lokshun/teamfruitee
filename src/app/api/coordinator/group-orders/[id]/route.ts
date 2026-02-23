@@ -11,8 +11,9 @@ const updateGroupOrderSchema = z.object({
   notes: z.string().optional(),
   deliveryPointIds: z.array(z.string()).optional(),
   productIds: z.array(z.string()).min(1).optional(),
-  minOrderAmount: z.number().min(0).nullable().optional(),
+  minOrderQuantity: z.number().int().min(1).nullable().optional(),
   transportUserId: z.string().nullable().optional(),
+  paymentReferentIds: z.array(z.string()).optional(),
 })
 
 export async function PATCH(
@@ -39,7 +40,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Impossible de modifier une commande clôturée ou livrée." }, { status: 409 })
   }
 
-  const { openDate, closeDate, deliveryDate, deliveryPointIds, productIds, minOrderAmount, transportUserId, ...rest } = parsed.data
+  const { openDate, closeDate, deliveryDate, deliveryPointIds, productIds, minOrderQuantity, transportUserId, paymentReferentIds, ...rest } = parsed.data
 
   try {
     const groupOrder = await prisma.$transaction(async (tx) => {
@@ -51,7 +52,7 @@ export async function PATCH(
           ...(openDate ? { openDate: new Date(openDate) } : {}),
           ...(closeDate ? { closeDate: new Date(closeDate) } : {}),
           ...(deliveryDate ? { deliveryDate: new Date(deliveryDate) } : {}),
-          ...(minOrderAmount !== undefined ? { minOrderAmount: minOrderAmount ?? null } : {}),
+          ...(minOrderQuantity !== undefined ? { minOrderQuantity: minOrderQuantity ?? null } : {}),
           ...(transportUserId !== undefined ? { transportUserId: transportUserId || null } : {}),
         },
       })
@@ -64,6 +65,18 @@ export async function PATCH(
           await tx.$executeRaw`
             INSERT INTO "_GroupOrderDeliveryPoints" ("A", "B")
             VALUES (${dpId}, ${id})
+            ON CONFLICT DO NOTHING
+          `
+        }
+      }
+
+      // 2b. Référents paiement via SQL brut (même raison)
+      if (paymentReferentIds !== undefined) {
+        await tx.$executeRaw`DELETE FROM "_PaymentReferents" WHERE "A" = ${id}`
+        for (const userId of paymentReferentIds) {
+          await tx.$executeRaw`
+            INSERT INTO "_PaymentReferents" ("A", "B")
+            VALUES (${id}, ${userId})
             ON CONFLICT DO NOTHING
           `
         }

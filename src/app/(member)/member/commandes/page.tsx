@@ -7,7 +7,6 @@ export default async function CommandesPage() {
   const session = await auth()
   if (!session) return null
 
-  // Commandes groupées ouvertes sans commande membre existante
   const openGroupOrders = await prisma.groupOrder.findMany({
     where: {
       status: "OPEN",
@@ -36,9 +35,9 @@ export default async function CommandesPage() {
           {orderable.map((go) => (
             <div
               key={go.id}
-              className="bg-white rounded-xl shadow-sm border border-green-200 p-4 flex items-center justify-between"
+              className="bg-white rounded-xl shadow-sm border border-green-200 p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
             >
-              <div>
+              <div className="min-w-0">
                 <p className="font-semibold text-gray-900">{go.title}</p>
                 <p className="text-sm text-gray-500">
                   {go.producer.name} — Clôture le {formatDate(go.closeDate)}
@@ -46,7 +45,7 @@ export default async function CommandesPage() {
               </div>
               <Link
                 href={`/member/commandes/nouvelle?groupOrderId=${go.id}`}
-                className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
+                className="inline-flex items-center justify-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors shrink-0"
               >
                 Commander
               </Link>
@@ -61,15 +60,15 @@ export default async function CommandesPage() {
           {alreadyOrdered.map((go) => (
             <div
               key={go.id}
-              className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center justify-between"
+              className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
             >
-              <div>
+              <div className="min-w-0">
                 <p className="font-semibold text-gray-900">{go.title}</p>
                 <p className="text-sm text-gray-500">
                   {go.producer.name} — Clôture le {formatDate(go.closeDate)}
                 </p>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 shrink-0">
                 <span className="font-semibold text-gray-900">
                   {formatCurrency(Number(go.memberOrders[0].totalAmount))}
                 </span>

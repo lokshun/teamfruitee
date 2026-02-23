@@ -9,8 +9,9 @@ export const groupOrderSchema = z.object({
   notes: z.string().optional(),
   productIds: z.array(z.string()).min(1, "Au moins un produit est requis"),
   deliveryPointIds: z.array(z.string()).optional(),
-  minOrderAmount: z.number().min(0).optional(),
+  minOrderQuantity: z.number().int().min(1).optional(),
   transportUserId: z.string().optional(),
+  paymentReferentIds: z.array(z.string()).optional(),
 }).refine(
   (data) => new Date(data.closeDate) > new Date(data.openDate),
   { message: "La date de clôture doit être après l'ouverture", path: ["closeDate"] }
@@ -29,5 +30,20 @@ export const memberOrderSchema = z.object({
   })).min(1, "Au moins une ligne de commande est requise"),
 })
 
+export const proxyOrderSchema = z.object({
+  userId: z.string().optional(),
+  proxyBuyerName: z.string().min(1).optional(),
+  deliveryPointId: z.string().min(1, "Le point de livraison est requis"),
+  notes: z.string().optional(),
+  lines: z.array(z.object({
+    groupOrderProductId: z.string().min(1),
+    quantity: z.number().positive("La quantité doit être positive"),
+  })).min(1, "Au moins une ligne de commande est requise"),
+}).refine(
+  (data) => data.userId || data.proxyBuyerName,
+  { message: "Un membre ou un nom d'acheteur est requis", path: ["userId"] }
+)
+
 export type GroupOrderInput = z.infer<typeof groupOrderSchema>
 export type MemberOrderInput = z.infer<typeof memberOrderSchema>
+export type ProxyOrderInput = z.infer<typeof proxyOrderSchema>

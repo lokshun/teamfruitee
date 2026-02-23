@@ -79,8 +79,10 @@ export default async function PaiementsPage() {
                 {go.memberOrders.map((mo) => (
                   <tr key={mo.id}>
                     <td className="px-5 py-3">
-                      <p className="font-medium text-gray-900">{mo.user.name}</p>
-                      {mo.user.commune && (
+                      <p className="font-medium text-gray-900">
+                        {mo.user?.name ?? mo.proxyBuyerName ?? "Acheteur"}
+                      </p>
+                      {mo.user?.commune && (
                         <p className="text-xs text-gray-400">{mo.user.commune}</p>
                       )}
                     </td>

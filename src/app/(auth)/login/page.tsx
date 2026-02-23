@@ -44,8 +44,8 @@ function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="w-full max-w-md bg-white rounded-xl shadow-md p-8">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-8">
+      <div className="w-full max-w-md bg-white rounded-xl shadow-md p-6 sm:p-8">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Connexion</h1>
         <p className="text-gray-500 mb-6">Team Fruitée</p>
 
@@ -73,6 +73,7 @@ function LoginForm() {
               {...register("email")}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
               placeholder="vous@exemple.fr"
+              suppressHydrationWarning
             />
             {errors.email && (
               <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>
@@ -86,6 +87,7 @@ function LoginForm() {
               {...register("password")}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
               placeholder="••••••••"
+              suppressHydrationWarning
             />
             {errors.password && (
               <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>

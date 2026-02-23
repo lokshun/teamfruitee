@@ -38,7 +38,8 @@ export function NewGroupOrderForm({ producers, deliveryPoints, users }: { produc
   const [selectedProducerId, setSelectedProducerId] = useState("")
   const [selectedProducts, setSelectedProducts] = useState<string[]>([])
   const [selectedDeliveryPoints, setSelectedDeliveryPoints] = useState<string[]>([])
-  const [minOrderAmount, setMinOrderAmount] = useState("")
+  const [selectedPaymentReferents, setSelectedPaymentReferents] = useState<string[]>([])
+  const [minOrderQuantity, setMinOrderQuantity] = useState("")
   const [transportUserId, setTransportUserId] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -66,8 +67,9 @@ export function NewGroupOrderForm({ producers, deliveryPoints, users }: { produc
       body: JSON.stringify({
         ...data,
         deliveryPointIds: selectedDeliveryPoints,
-        minOrderAmount: minOrderAmount ? parseFloat(minOrderAmount) : undefined,
+        minOrderQuantity: minOrderQuantity ? parseInt(minOrderQuantity, 10) : undefined,
         transportUserId: transportUserId || undefined,
+        paymentReferentIds: selectedPaymentReferents.length > 0 ? selectedPaymentReferents : undefined,
       }),
     })
     if (!res.ok) {
@@ -181,16 +183,16 @@ export function NewGroupOrderForm({ producers, deliveryPoints, users }: { produc
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Montant minimum de commande
-            <span className="text-gray-400 font-normal ml-1">(optionnel, en €)</span>
+            Quantité minimum de commande
+            <span className="text-gray-400 font-normal ml-1">(optionnel, en unités)</span>
           </label>
           <input
             type="number"
-            min="0"
-            step="0.01"
-            value={minOrderAmount}
-            onChange={(e) => setMinOrderAmount(e.target.value)}
-            placeholder="0.00"
+            min="1"
+            step="1"
+            value={minOrderQuantity}
+            onChange={(e) => setMinOrderQuantity(e.target.value)}
+            placeholder="10"
             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
           />
         </div>
@@ -211,6 +213,34 @@ export function NewGroupOrderForm({ producers, deliveryPoints, users }: { produc
               </option>
             ))}
           </select>
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Référents paiement
+          <span className="text-gray-400 font-normal ml-1">(optionnel, responsables de la collecte)</span>
+        </label>
+        <div className="space-y-2">
+          {users.map((u) => (
+            <label key={u.id} className="flex items-center gap-3 p-2.5 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+              <input
+                type="checkbox"
+                checked={selectedPaymentReferents.includes(u.id)}
+                onChange={() => {
+                  setSelectedPaymentReferents((prev) =>
+                    prev.includes(u.id) ? prev.filter((id) => id !== u.id) : [...prev, u.id]
+                  )
+                }}
+                className="rounded text-green-600"
+              />
+              <span className="text-sm text-gray-900">
+                {u.name}
+                {u.commune ? <span className="text-gray-400"> ({u.commune})</span> : null}
+                <span className="ml-1 text-xs text-gray-400">[{u.role}]</span>
+              </span>
+            </label>
+          ))}
         </div>
       </div>
 

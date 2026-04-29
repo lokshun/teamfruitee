@@ -8,6 +8,7 @@ const resend = new Resend(process.env.RESEND_API_KEY)
 
 const updateSchema = z.object({
   status: z.enum(["ACTIVE", "INACTIVE", "PENDING"]),
+  role: z.enum(["MEMBER", "COORDINATOR"]).optional(),
 })
 
 export async function PATCH(
@@ -34,8 +35,11 @@ export async function PATCH(
 
   const updated = await prisma.user.update({
     where: { id },
-    data: { status: parsed.data.status },
-    select: { id: true, email: true, name: true, status: true },
+    data: {
+      status: parsed.data.status,
+      ...(parsed.data.role ? { role: parsed.data.role } : {}),
+    },
+    select: { id: true, email: true, name: true, status: true, role: true },
   })
 
   // Envoyer email de bienvenue si activation

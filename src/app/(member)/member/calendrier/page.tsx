@@ -24,7 +24,7 @@ export default async function CalendrierPage() {
 
       {/* Légende */}
       <div className="flex flex-wrap gap-3">
-        {(Object.entries(STATUS_LABELS) as [GroupOrderStatus, string][]).map(([status, label]) => (
+        {(Object.entries(STATUS_LABELS) as [GroupOrderStatus, string][]).filter(([status]) => status !== "DRAFT").map(([status, label]) => (
           <div key={status} className="flex items-center gap-1.5">
             <div
               className="w-3 h-3 rounded-full"

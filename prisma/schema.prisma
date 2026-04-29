@@ -41,6 +41,12 @@ enum PaymentStatus {
   PAID
 }
 
+enum PaymentMethod {
+  CASH
+  CHECK
+  TRANSFER
+}
+
 // ─── Models ───────────────────────────────────────────────
 
 model User {
@@ -57,6 +63,7 @@ model User {
   // Relations
   memberOrders                MemberOrder[] @relation("MemberOrderUser")
   ordersPlacedAsCoordinator   MemberOrder[] @relation("PlacedByCoordinator")
+  paymentReferentOrders       MemberOrder[] @relation("PaymentReferentOrders")
   paymentReferentFor          GroupOrder[]  @relation("PaymentReferents")
   producer                    Producer?
   groupOrdersCreated          GroupOrder[]  @relation("CreatedBy")
@@ -207,17 +214,20 @@ model MemberOrder {
   proxyBuyerName        String?
   placedByCoordinatorId String?
   deliveryPointId       String
+  paymentReferentId     String?
+  paymentMethod         PaymentMethod?
   totalAmount           Decimal       @default(0) @db.Decimal(10, 2)
   paymentStatus         PaymentStatus @default(NOT_PAID)
   notes                 String?
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
 
-  groupOrder    GroupOrder    @relation(fields: [groupOrderId], references: [id])
-  user          User?         @relation("MemberOrderUser", fields: [userId], references: [id])
-  coordinator   User?         @relation("PlacedByCoordinator", fields: [placedByCoordinatorId], references: [id])
-  deliveryPoint DeliveryPoint @relation(fields: [deliveryPointId], references: [id])
-  orderLines    OrderLine[]
+  groupOrder       GroupOrder    @relation(fields: [groupOrderId], references: [id])
+  user             User?         @relation("MemberOrderUser", fields: [userId], references: [id])
+  coordinator      User?         @relation("PlacedByCoordinator", fields: [placedByCoordinatorId], references: [id])
+  paymentReferent  User?         @relation("PaymentReferentOrders", fields: [paymentReferentId], references: [id])
+  deliveryPoint    DeliveryPoint @relation(fields: [deliveryPointId], references: [id])
+  orderLines       OrderLine[]
 
   @@map("member_orders")
 }

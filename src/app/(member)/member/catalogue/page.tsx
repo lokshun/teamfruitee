@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma"
-import { formatCurrency } from "@/lib/utils"
+import { formatCurrency, formatDate } from "@/lib/utils"
 
 const unitTypeLabels: Record<string, string> = {
   CRATE: "Caisse",
@@ -9,74 +9,63 @@ const unitTypeLabels: Record<string, string> = {
 }
 
 export default async function CataloguePage() {
-  const producers = await prisma.producer.findMany({
-    where: { isActive: true },
-    include: {
-      products: {
-        where: { isActive: true },
-        orderBy: { name: "asc" },
-      },
-    },
-    orderBy: { name: "asc" },
-  })
-
-  // Commandes groupées ouvertes
   const openGroupOrders = await prisma.groupOrder.findMany({
     where: { status: "OPEN" },
-    include: { producer: { select: { id: true, name: true } } },
+    include: {
+      producer: { select: { name: true, location: true, description: true } },
+      products: {
+        include: {
+          product: true,
+        },
+        orderBy: { product: { name: "asc" } },
+      },
+    },
     orderBy: { closeDate: "asc" },
   })
 
-  const openProducerIds = new Set(openGroupOrders.map((go) => go.producer.id))
-
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Catalogue des producteurs</h1>
-        {openGroupOrders.length > 0 && (
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-            {openGroupOrders.length} commande{openGroupOrders.length > 1 ? "s" : ""} ouverte{openGroupOrders.length > 1 ? "s" : ""}
-          </span>
-        )}
-      </div>
+      <h1 className="text-2xl font-bold text-gray-900">Catalogue des commandes ouvertes</h1>
 
-      {producers.length === 0 && (
+      {openGroupOrders.length === 0 && (
         <p className="text-gray-500 text-center py-12">
-          Aucun producteur disponible pour le moment.
+          Aucune commande groupée ouverte pour le moment.
         </p>
       )}
 
-      {producers.map((producer) => {
-        const hasOpenOrder = openProducerIds.has(producer.id)
-        const openOrder = openGroupOrders.find((go) => go.producer.id === producer.id)
-
-        return (
-          <div key={producer.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="p-6 border-b border-gray-100">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-900">{producer.name}</h2>
-                  {producer.location && (
-                    <p className="text-sm text-gray-500">📍 {producer.location}</p>
-                  )}
-                  {producer.description && (
-                    <p className="text-sm text-gray-600 mt-1">{producer.description}</p>
-                  )}
-                </div>
-                {hasOpenOrder && openOrder && (
-                  <a
-                    href={`/member/commandes/nouvelle?groupOrderId=${openOrder.id}`}
-                    className="ml-4 px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
-                  >
-                    Commander →
-                  </a>
+      {openGroupOrders.map((go) => (
+        <div key={go.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          {/* En-tête */}
+          <div className="p-6 border-b border-gray-100">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">{go.title}</h2>
+                <p className="text-sm font-medium text-green-700">{go.producer.name}</p>
+                {go.producer.location && (
+                  <p className="text-sm text-gray-500">📍 {go.producer.location}</p>
                 )}
+                {go.producer.description && (
+                  <p className="text-sm text-gray-600 mt-1">{go.producer.description}</p>
+                )}
+                <p className="text-xs text-gray-400 mt-2">
+                  Clôture le <span className="font-medium text-gray-600">{formatDate(go.closeDate)}</span>
+                </p>
               </div>
+              <a
+                href={`/member/commandes/nouvelle?groupOrderId=${go.id}`}
+                className="shrink-0 px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+              >
+                Commander →
+              </a>
             </div>
+          </div>
 
-            {producer.products.length > 0 ? (
-              <div className="divide-y divide-gray-50">
-                {producer.products.map((product) => (
+          {/* Produits */}
+          {go.products.length > 0 ? (
+            <div className="divide-y divide-gray-50">
+              {go.products.map(({ product, priceOverride }) => {
+                const price = priceOverride ?? product.priceWithTransport
+                return (
                   <div key={product.id} className="px-6 py-3 flex items-center justify-between">
                     <div>
                       <p className="font-medium text-gray-900">{product.name}</p>
@@ -89,19 +78,19 @@ export default async function CataloguePage() {
                     </div>
                     <div className="text-right">
                       <p className="font-semibold text-gray-900">
-                        {formatCurrency(Number(product.priceWithTransport))}
+                        {formatCurrency(Number(price))}
                       </p>
                       <p className="text-xs text-gray-400">avec transport</p>
                     </div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <p className="px-6 py-4 text-sm text-gray-400">Aucun produit disponible.</p>
-            )}
-          </div>
-        )
-      })}
+                )
+              })}
+            </div>
+          ) : (
+            <p className="px-6 py-4 text-sm text-gray-400">Aucun produit dans cette commande.</p>
+          )}
+        </div>
+      ))}
     </div>
   )
 }

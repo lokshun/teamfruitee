@@ -27,6 +27,7 @@ export default async function ModifierCommandePage({
           products: {
             include: { product: true },
           },
+          paymentReferents: { select: { id: true, name: true } },
         },
       },
     },
@@ -72,8 +73,11 @@ export default async function ModifierCommandePage({
           memberOrderId={id}
           groupOrder={memberOrder.groupOrder}
           deliveryPoints={deliveryPoints}
+          paymentReferents={memberOrder.groupOrder.paymentReferents}
           initialQuantities={initialQuantities}
           initialDeliveryPointId={memberOrder.deliveryPointId}
+          initialPaymentReferentId={memberOrder.paymentReferentId ?? ""}
+          initialPaymentMethod={memberOrder.paymentMethod ?? ""}
           initialNotes={memberOrder.notes ?? ""}
         />
       )}

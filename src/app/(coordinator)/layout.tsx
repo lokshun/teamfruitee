@@ -6,6 +6,7 @@ const coordinatorNavItems = [
   { href: "/coordinator/dashboard", label: "Tableau de bord" },
   { href: "/coordinator/producteurs", label: "Producteurs" },
   { href: "/commandes-groupees", label: "Commandes groupées" },
+  { href: "/member/catalogue", label: "Commander" },
   { href: "/paiements", label: "Paiements" },
   { href: "/membres", label: "Membres" },
   { href: "/points-livraison", label: "Points de livraison" },

@@ -19,6 +19,7 @@ export default async function NouvelleCommandePage({
         include: { product: true },
       },
       deliveryPoints: { select: { id: true } },
+      paymentReferents: { select: { id: true, name: true } },
     },
   })
 
@@ -57,6 +58,7 @@ export default async function NouvelleCommandePage({
           })),
         }}
         deliveryPoints={deliveryPoints}
+        paymentReferents={groupOrder.paymentReferents}
       />
     </div>
   )

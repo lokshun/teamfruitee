@@ -11,6 +11,12 @@ const paymentLabels: Record<string, string> = {
   PARTIAL: "Partiel",
   PAID: "Payé",
 }
+
+const paymentMethodLabels: Record<string, string> = {
+  CASH: "Espèces",
+  CHECK: "Chèque",
+  TRANSFER: "Virement",
+}
 const paymentColors: Record<string, string> = {
   NOT_PAID: "bg-red-100 text-red-700",
   PARTIAL: "bg-yellow-100 text-yellow-700",
@@ -36,6 +42,7 @@ export default async function GroupOrderDetailPage({
         include: {
           user: { select: { name: true, commune: true } },
           deliveryPoint: { select: { name: true } },
+          paymentReferent: { select: { name: true } },
           orderLines: {
             include: {
               groupOrderProduct: { include: { product: { select: { name: true } } } },
@@ -289,6 +296,14 @@ export default async function GroupOrderDetailPage({
                       )}
                     </p>
                     <p className="text-sm text-gray-500">📦 {mo.deliveryPoint.name}</p>
+                    {mo.paymentReferent && (
+                      <p className="text-sm text-gray-500">💶 {mo.paymentReferent.name}</p>
+                    )}
+                    {mo.paymentMethod && (
+                      <p className="text-sm text-gray-500">
+                        💳 {paymentMethodLabels[mo.paymentMethod]}
+                      </p>
+                    )}
                   </div>
                   <div className="flex items-center gap-3">
                     <p className="font-bold text-gray-900">{formatCurrency(Number(mo.totalAmount))}</p>

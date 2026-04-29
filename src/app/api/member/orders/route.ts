@@ -7,7 +7,7 @@ import type { Prisma } from "@/generated/prisma/client"
 
 export async function POST(req: Request) {
   const session = await auth()
-  if (!session || session.user.role !== "MEMBER" || session.user.status !== "ACTIVE") {
+  if (!session || !["MEMBER", "COORDINATOR"].includes(session.user.role) || session.user.status !== "ACTIVE") {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 })
   }
 
@@ -17,7 +17,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Données invalides", details: parsed.error.flatten() }, { status: 400 })
   }
 
-  const { groupOrderId, deliveryPointId, notes, lines } = parsed.data
+  const { groupOrderId, deliveryPointId, paymentReferentId, paymentMethod, notes, lines } = parsed.data
 
   try {
     const memberOrder = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
@@ -70,6 +70,8 @@ export async function POST(req: Request) {
           groupOrderId,
           userId: session.user.id,
           deliveryPointId,
+          paymentReferentId: paymentReferentId ?? null,
+          paymentMethod: paymentMethod ?? null,
           notes,
           totalAmount,
           orderLines: {

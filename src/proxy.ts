@@ -41,7 +41,7 @@ export default auth((req) => {
     return NextResponse.redirect(new URL("/unauthorized", req.url))
   }
 
-  if (pathname.startsWith("/member") && session.user.role !== "MEMBER") {
+  if (pathname.startsWith("/member") && !["MEMBER", "COORDINATOR"].includes(session.user.role)) {
     return NextResponse.redirect(new URL("/unauthorized", req.url))
   }
 

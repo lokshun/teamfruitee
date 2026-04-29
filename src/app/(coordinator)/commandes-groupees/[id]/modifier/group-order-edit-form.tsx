@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Trash2, Lock } from "lucide-react"
+import { Trash2, Lock, Plus, X } from "lucide-react"
 
 const unitLabels: Record<string, string> = { CRATE: "Caisse", KG: "kg", UNIT: "Unité", LITER: "L" }
 
@@ -50,7 +50,7 @@ function toDatetimeLocal(date: Date): string {
 
 export function GroupOrderEditForm({
   groupOrder,
-  deliveryPoints,
+  deliveryPoints: initialDeliveryPoints,
   allProducts,
   users,
   canDelete,
@@ -71,12 +71,52 @@ export function GroupOrderEditForm({
     groupOrder.minOrderQuantity != null ? String(groupOrder.minOrderQuantity) : ""
   )
   const [transportUserId, setTransportUserId] = useState(groupOrder.transportUserId ?? "")
+  const [deliveryPoints, setDeliveryPoints] = useState<DeliveryPoint[]>(initialDeliveryPoints)
   const [selectedDeliveryPoints, setSelectedDeliveryPoints] = useState<string[]>(groupOrder.deliveryPointIds)
   const [selectedPaymentReferents, setSelectedPaymentReferents] = useState<string[]>(groupOrder.paymentReferentIds)
   const [selectedProducts, setSelectedProducts] = useState<string[]>(groupOrder.currentProductIds)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
+
+  // Nouveau point de livraison inline
+  const [showNewDP, setShowNewDP] = useState(false)
+  const [newDP, setNewDP] = useState({ name: "", address: "", commune: "" })
+  const [newDPLoading, setNewDPLoading] = useState(false)
+  const [newDPApiError, setNewDPApiError] = useState<string | null>(null)
+  const [newDPTouched, setNewDPTouched] = useState(false)
+
+  const newDPErrors = {
+    name: newDPTouched && !newDP.name.trim() ? "Le nom est requis" : null,
+    commune: newDPTouched && !newDP.commune.trim() ? "La commune est requise" : null,
+    address: newDPTouched && !newDP.address.trim() ? "L'adresse est requise" : null,
+  }
+  const hasNewDPErrors = Object.values(newDPErrors).some(Boolean)
+
+  async function createDeliveryPoint() {
+    setNewDPTouched(true)
+    if (!newDP.name.trim() || !newDP.address.trim() || !newDP.commune.trim()) return
+    setNewDPLoading(true)
+    setNewDPApiError(null)
+    const res = await fetch("/api/delivery-points", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newDP),
+    })
+    if (!res.ok) {
+      const json = await res.json()
+      setNewDPApiError(json.error ?? "Erreur lors de la création")
+      setNewDPLoading(false)
+      return
+    }
+    const created: DeliveryPoint = await res.json()
+    setDeliveryPoints((prev) => [...prev, created])
+    setSelectedDeliveryPoints((prev) => [...prev, created.id])
+    setNewDP({ name: "", address: "", commune: "" })
+    setNewDPTouched(false)
+    setShowNewDP(false)
+    setNewDPLoading(false)
+  }
 
   function toggleDeliveryPoint(id: string) {
     setSelectedDeliveryPoints((prev) =>
@@ -253,10 +293,21 @@ export function GroupOrderEditForm({
 
       {/* Points de livraison */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Points de livraison disponibles
-          <span className="text-gray-400 font-normal ml-1">(laisser vide = tous les points actifs)</span>
-        </label>
+        <div className="flex items-center justify-between mb-2">
+          <label className="block text-sm font-medium text-gray-700">
+            Points de livraison disponibles
+            <span className="text-gray-400 font-normal ml-1">(laisser vide = tous les points actifs)</span>
+          </label>
+          <button
+            type="button"
+            onClick={() => { setShowNewDP((v) => !v); setNewDPApiError(null) }}
+            className="flex items-center gap-1 text-xs text-green-700 hover:text-green-800 font-medium"
+          >
+            {showNewDP ? <X className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
+            {showNewDP ? "Annuler" : "Nouveau point"}
+          </button>
+        </div>
+
         <div className="space-y-2">
           {deliveryPoints.map((dp) => (
             <label key={dp.id} className="flex items-center gap-3 p-2.5 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
@@ -272,6 +323,76 @@ export function GroupOrderEditForm({
             </label>
           ))}
         </div>
+
+        {showNewDP && (
+          <div className="mt-3 border border-green-200 bg-green-50 rounded-lg p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold text-green-800">Nouveau point de livraison</p>
+              <p className="text-xs text-red-500 font-medium">* Tous les champs sont obligatoires</p>
+            </div>
+            {newDPApiError && (
+              <p className="text-red-600 text-xs bg-red-50 border border-red-200 rounded px-2 py-1">{newDPApiError}</p>
+            )}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  Nom <span className="text-red-500">*</span>
+                </label>
+                <input
+                  value={newDP.name}
+                  onChange={(e) => setNewDP((p) => ({ ...p, name: e.target.value }))}
+                  placeholder="Salle des fêtes"
+                  className={`w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 bg-white ${
+                    newDPErrors.name
+                      ? "border-red-400 focus:ring-red-400 bg-red-50"
+                      : "border-gray-300 focus:ring-green-500"
+                  }`}
+                />
+                {newDPErrors.name && <p className="text-red-500 text-xs mt-0.5">{newDPErrors.name}</p>}
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  Commune <span className="text-red-500">*</span>
+                </label>
+                <input
+                  value={newDP.commune}
+                  onChange={(e) => setNewDP((p) => ({ ...p, commune: e.target.value }))}
+                  placeholder="Arles"
+                  className={`w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 bg-white ${
+                    newDPErrors.commune
+                      ? "border-red-400 focus:ring-red-400 bg-red-50"
+                      : "border-gray-300 focus:ring-green-500"
+                  }`}
+                />
+                {newDPErrors.commune && <p className="text-red-500 text-xs mt-0.5">{newDPErrors.commune}</p>}
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Adresse <span className="text-red-500">*</span>
+              </label>
+              <input
+                value={newDP.address}
+                onChange={(e) => setNewDP((p) => ({ ...p, address: e.target.value }))}
+                placeholder="12 rue des Platanes"
+                className={`w-full border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 bg-white ${
+                  newDPErrors.address
+                    ? "border-red-400 focus:ring-red-400 bg-red-50"
+                    : "border-gray-300 focus:ring-green-500"
+                }`}
+              />
+              {newDPErrors.address && <p className="text-red-500 text-xs mt-0.5">{newDPErrors.address}</p>}
+            </div>
+            <button
+              type="button"
+              onClick={createDeliveryPoint}
+              disabled={newDPLoading || (newDPTouched && hasNewDPErrors)}
+              className="w-full bg-green-600 text-white rounded-lg py-1.5 text-sm font-medium hover:bg-green-700 disabled:opacity-50"
+            >
+              {newDPLoading ? "Création..." : "Créer et sélectionner ce point"}
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-4">

@@ -10,6 +10,8 @@ const updateLinesSchema = z.object({
     quantity: z.number().positive(),
   })).min(1),
   deliveryPointId: z.string().optional(),
+  paymentReferentId: z.string().optional(),
+  paymentMethod: z.enum(["CASH", "CHECK", "TRANSFER"]).optional(),
   notes: z.string().optional(),
 })
 
@@ -18,7 +20,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth()
-  if (!session || session.user.role !== "MEMBER") {
+  if (!session || !["MEMBER", "COORDINATOR"].includes(session.user.role)) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 })
   }
 
@@ -57,6 +59,8 @@ export async function PATCH(
         data: {
           totalAmount,
           deliveryPointId: parsed.data.deliveryPointId,
+          paymentReferentId: parsed.data.paymentReferentId ?? null,
+          paymentMethod: parsed.data.paymentMethod ?? null,
           notes: parsed.data.notes,
           orderLines: { create: linesWithPrices },
         },
@@ -79,7 +83,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth()
-  if (!session || session.user.role !== "MEMBER") {
+  if (!session || !["MEMBER", "COORDINATOR"].includes(session.user.role)) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 })
   }
 

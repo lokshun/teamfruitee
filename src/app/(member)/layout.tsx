@@ -10,6 +10,13 @@ const memberNavItems = [
   { href: "/member/documents", label: "Documents" },
 ]
 
+const coordinatorAsMemberNavItems = [
+  { href: "/coordinator/dashboard", label: "← Dashboard" },
+  { href: "/member/catalogue", label: "Catalogue" },
+  { href: "/member/commandes", label: "Mes commandes" },
+  { href: "/member/historique", label: "Historique" },
+]
+
 export default async function MemberLayout({
   children,
 }: {
@@ -17,13 +24,15 @@ export default async function MemberLayout({
 }) {
   const session = await auth()
 
-  if (!session || session.user.role !== "MEMBER" || session.user.status !== "ACTIVE") {
+  if (!session || !["MEMBER", "COORDINATOR"].includes(session.user.role) || session.user.status !== "ACTIVE") {
     redirect("/login")
   }
 
+  const navItems = session.user.role === "COORDINATOR" ? coordinatorAsMemberNavItems : memberNavItems
+
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar items={memberNavItems} userName={session.user.name} />
+      <Navbar items={navItems} userName={session.user.name} />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
         {children}
       </main>

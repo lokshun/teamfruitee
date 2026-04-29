@@ -23,6 +23,8 @@ export const groupOrderSchema = z.object({
 export const memberOrderSchema = z.object({
   groupOrderId: z.string().min(1),
   deliveryPointId: z.string().min(1, "Le point de livraison est requis"),
+  paymentReferentId: z.string().optional(),
+  paymentMethod: z.enum(["CASH", "CHECK", "TRANSFER"]).optional(),
   notes: z.string().optional(),
   lines: z.array(z.object({
     groupOrderProductId: z.string().min(1),

@@ -12,13 +12,13 @@ export function MemberActions({ userId, currentStatus }: MemberActionsProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
 
-  async function updateStatus(status: "ACTIVE" | "INACTIVE" | "PENDING") {
+  async function updateUser(status: "ACTIVE" | "INACTIVE" | "PENDING", role?: "MEMBER" | "COORDINATOR") {
     setLoading(true)
     try {
       await fetch(`/api/coordinator/users/${userId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status, ...(role ? { role } : {}) }),
       })
       router.refresh()
     } finally {
@@ -28,16 +28,23 @@ export function MemberActions({ userId, currentStatus }: MemberActionsProps) {
 
   if (currentStatus === "PENDING") {
     return (
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <button
-          onClick={() => updateStatus("ACTIVE")}
+          onClick={() => updateUser("ACTIVE", "MEMBER")}
           disabled={loading}
           className="px-3 py-1 bg-green-600 text-white text-xs rounded-lg hover:bg-green-700 disabled:opacity-50"
         >
-          Valider
+          Valider — Acheteur
         </button>
         <button
-          onClick={() => updateStatus("INACTIVE")}
+          onClick={() => updateUser("ACTIVE", "COORDINATOR")}
+          disabled={loading}
+          className="px-3 py-1 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 disabled:opacity-50"
+        >
+          Valider — Coordinateur
+        </button>
+        <button
+          onClick={() => updateUser("INACTIVE")}
           disabled={loading}
           className="px-3 py-1 bg-red-100 text-red-700 text-xs rounded-lg hover:bg-red-200 disabled:opacity-50"
         >
@@ -50,7 +57,7 @@ export function MemberActions({ userId, currentStatus }: MemberActionsProps) {
   if (currentStatus === "ACTIVE") {
     return (
       <button
-        onClick={() => updateStatus("INACTIVE")}
+        onClick={() => updateUser("INACTIVE")}
         disabled={loading}
         className="px-3 py-1 bg-gray-100 text-gray-600 text-xs rounded-lg hover:bg-gray-200 disabled:opacity-50"
       >
@@ -61,7 +68,7 @@ export function MemberActions({ userId, currentStatus }: MemberActionsProps) {
 
   return (
     <button
-      onClick={() => updateStatus("ACTIVE")}
+      onClick={() => updateUser("ACTIVE")}
       disabled={loading}
       className="px-3 py-1 bg-green-50 text-green-700 text-xs rounded-lg hover:bg-green-100 disabled:opacity-50"
     >

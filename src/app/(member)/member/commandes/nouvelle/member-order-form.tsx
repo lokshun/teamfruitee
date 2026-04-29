@@ -28,6 +28,11 @@ interface DeliveryPoint {
   commune: string
 }
 
+interface PaymentReferent {
+  id: string
+  name: string
+}
+
 const unitLabels: Record<string, string> = {
   CRATE: "caisse",
   KG: "kg",
@@ -38,13 +43,17 @@ const unitLabels: Record<string, string> = {
 export function MemberOrderForm({
   groupOrder,
   deliveryPoints,
+  paymentReferents,
 }: {
   groupOrder: GroupOrder
   deliveryPoints: DeliveryPoint[]
+  paymentReferents: PaymentReferent[]
 }) {
   const router = useRouter()
   const [quantities, setQuantities] = useState<Record<string, number>>({})
   const [deliveryPointId, setDeliveryPointId] = useState("")
+  const [paymentReferentId, setPaymentReferentId] = useState("")
+  const [paymentMethod, setPaymentMethod] = useState("")
   const [notes, setNotes] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -82,6 +91,8 @@ export function MemberOrderForm({
       body: JSON.stringify({
         groupOrderId: groupOrder.id,
         deliveryPointId,
+        paymentReferentId: paymentReferentId || undefined,
+        paymentMethod: paymentMethod || undefined,
         notes,
         lines: lines.map((l) => ({ groupOrderProductId: l.groupOrderProductId, quantity: l.quantity })),
       }),
@@ -163,6 +174,50 @@ export function MemberOrderForm({
         </select>
       </div>
 
+      {paymentReferents.length > 0 && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Référent paiement *
+            <span className="text-gray-400 font-normal ml-1">(à qui remettre votre paiement)</span>
+          </label>
+          <select
+            value={paymentReferentId}
+            onChange={(e) => setPaymentReferentId(e.target.value)}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+          >
+            <option value="">Choisir un référent…</option>
+            {paymentReferents.map((r) => (
+              <option key={r.id} value={r.id}>{r.name}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Mode de paiement</label>
+        <div className="flex gap-2">
+          {([
+            { value: "CASH", label: "Espèces", icon: "💵" },
+            { value: "CHECK", label: "Chèque", icon: "📝" },
+            { value: "TRANSFER", label: "Virement", icon: "🏦" },
+          ] as const).map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setPaymentMethod(paymentMethod === opt.value ? "" : opt.value)}
+              className={`flex-1 flex flex-col items-center gap-1 py-2.5 rounded-lg border text-sm font-medium transition-colors ${
+                paymentMethod === opt.value
+                  ? "bg-green-50 border-green-500 text-green-700"
+                  : "bg-white border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50"
+              }`}
+            >
+              <span className="text-lg">{opt.icon}</span>
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Notes (facultatif)</label>
         <textarea
@@ -181,7 +236,14 @@ export function MemberOrderForm({
             <span className="font-semibold text-gray-900">Total à payer :</span>
             <span className="text-xl font-bold text-green-700">{formatCurrency(total)}</span>
           </div>
-          <p className="text-xs text-gray-500 mt-1">Paiement par espèces ou virement.</p>
+          {paymentMethod && (
+            <p className="text-xs text-gray-500 mt-1">
+              Mode de paiement sélectionné :{" "}
+              <span className="font-medium">
+                {{ CASH: "Espèces", CHECK: "Chèque", TRANSFER: "Virement" }[paymentMethod]}
+              </span>
+            </p>
+          )}
         </div>
       )}
 

@@ -17,7 +17,7 @@ export default async function MemberDocumentsPage() {
       mimeType: true,
       fileSize: true,
       createdAt: true,
-      addedByUser: { select: { name: true } },
+      addedByUser: { select: { firstName: true, lastName: true } },
     },
   })
 

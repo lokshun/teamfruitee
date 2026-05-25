@@ -18,7 +18,8 @@ export async function POST(req: Request) {
       )
     }
 
-    const { email, name, commune, password } = parsed.data
+    const { email, firstName, lastName, commune, password } = parsed.data
+    const displayName = [firstName, lastName].filter(Boolean).join(" ")
 
     const existing = await prisma.user.findUnique({ where: { email } })
     if (existing) {
@@ -30,10 +31,11 @@ export async function POST(req: Request) {
 
     const hashedPassword = await bcrypt.hash(password, 12)
 
-    const user = await prisma.user.create({
+    await prisma.user.create({
       data: {
         email,
-        name,
+        firstName: firstName ?? "",
+        lastName,
         commune,
         hashedPassword,
         role: "MEMBER",
@@ -48,18 +50,22 @@ export async function POST(req: Request) {
     })
 
     if (coordinators.length > 0 && process.env.RESEND_API_KEY) {
-      await resend.emails.send({
-        from: process.env.EMAIL_FROM ?? "noreply@groupement-achat.fr",
-        to: coordinators.map((c) => c.email),
-        subject: `Nouvelle demande d'inscription — ${name}`,
-        html: `
-          <h2>Nouvelle demande d'inscription</h2>
-          <p><strong>${name}</strong> (${email}) souhaite rejoindre Team Fruitée.</p>
-          <p>Commune : ${commune}</p>
-          <p>Connectez-vous au tableau de bord pour valider ou refuser cette demande.</p>
-          <a href="${process.env.NEXT_PUBLIC_APP_URL}/membres">Gérer les membres</a>
-        `,
-      })
+      try {
+        await resend.emails.send({
+          from: process.env.EMAIL_FROM ?? "noreply@groupement-achat.fr",
+          to: coordinators.map((c) => c.email),
+          subject: `Nouvelle demande d'inscription — ${displayName}`,
+          html: `
+            <h2>Nouvelle demande d'inscription</h2>
+            <p><strong>${displayName}</strong> (${email}) souhaite rejoindre Team Fruitée.</p>
+            <p>Commune : ${commune}</p>
+            <p>Connectez-vous au tableau de bord pour valider ou refuser cette demande.</p>
+            <a href="${process.env.NEXT_PUBLIC_APP_URL}/membres">Gérer les membres</a>
+          `,
+        })
+      } catch (emailErr) {
+        console.error("[REGISTER_EMAIL]", emailErr)
+      }
     }
 
     return NextResponse.json(

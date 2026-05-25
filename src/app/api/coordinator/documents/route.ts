@@ -11,7 +11,7 @@ export async function GET() {
 
   const documents = await prisma.document.findMany({
     orderBy: { createdAt: "desc" },
-    include: { addedByUser: { select: { name: true } } },
+    include: { addedByUser: { select: { firstName: true, lastName: true } } },
   })
 
   return NextResponse.json(documents)

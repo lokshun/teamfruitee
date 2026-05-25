@@ -1,13 +1,16 @@
 "use client"
 
 import { useState } from "react"
+import { formatProductUnit, formatOrderUnit } from "@/lib/product-utils"
 
 interface Product {
   id: string
   productId: string
   name: string
-  unitType: string
+  packagingType: string | null
+  measureUnit: string
   unitQuantity: number
+  unitsPerPackage: number | null
   price: number
 }
 
@@ -19,11 +22,11 @@ interface DeliveryPoint {
 
 interface Member {
   id: string
-  name: string
+  firstName: string
+  lastName: string
   commune: string | null
 }
 
-const unitLabels: Record<string, string> = { CRATE: "Caisse", KG: "kg", UNIT: "Unité", LITER: "L" }
 
 export function ProxyOrderForm({
   groupOrderId,
@@ -188,7 +191,7 @@ export function ProxyOrderForm({
               <option value="">Choisir un membre…</option>
               {availableMembers.map((m) => (
                 <option key={m.id} value={m.id}>
-                  {m.name}{m.commune ? ` (${m.commune})` : ""}
+                  {[m.firstName, m.lastName].filter(Boolean).join(" ")}{m.commune ? ` (${m.commune})` : ""}
                 </option>
               ))}
             </select>
@@ -241,7 +244,7 @@ export function ProxyOrderForm({
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900 truncate">{p.name}</p>
                   <p className="text-xs text-gray-400">
-                    {p.unitQuantity}&nbsp;{unitLabels[p.unitType]}&nbsp;—&nbsp;{p.price.toFixed(2)}&nbsp;€
+                    {formatProductUnit(p)}&nbsp;—&nbsp;{p.price.toFixed(2)}&nbsp;€&nbsp;/&nbsp;{formatOrderUnit(p)}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">

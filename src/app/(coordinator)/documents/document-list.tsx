@@ -12,7 +12,7 @@ interface DocumentItem {
   fileSize: number | null
   allowedRoles: string[]
   createdAt: string
-  addedByUser: { name: string }
+  addedByUser: { firstName: string; lastName: string }
 }
 
 const roleLabels: Record<string, string> = {
@@ -193,7 +193,7 @@ export function DocumentList({ documents }: { documents: DocumentItem[] }) {
                     </span>
                   ))}
                   <span className="text-xs text-gray-400">
-                    {new Date(doc.createdAt).toLocaleDateString("fr-FR")} — {doc.addedByUser.name}
+                    {new Date(doc.createdAt).toLocaleDateString("fr-FR")} — {[doc.addedByUser.firstName, doc.addedByUser.lastName].filter(Boolean).join(" ")}
                   </span>
                 </div>
               </div>

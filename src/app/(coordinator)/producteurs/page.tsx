@@ -1,10 +1,7 @@
 import { prisma } from "@/lib/prisma"
 import Link from "next/link"
 import { ProducerForm } from "./producer-form"
-
-const unitTypeLabels: Record<string, string> = {
-  CRATE: "Caisse", KG: "kg", UNIT: "Unité", LITER: "Litre",
-}
+import { formatProductUnit } from "@/lib/product-utils"
 
 export default async function ProducteursPage() {
   const producers = await prisma.producer.findMany({
@@ -82,7 +79,7 @@ export default async function ProducteursPage() {
                       <tr key={product.id} className={!product.isActive ? "opacity-50" : ""}>
                         <td className="px-5 py-3 font-medium text-gray-900">{product.name}</td>
                         <td className="px-5 py-3 text-gray-600">
-                          {product.unitQuantity} {unitTypeLabels[product.unitType]}
+                          {formatProductUnit(product)}
                         </td>
                         <td className="px-5 py-3 text-right text-gray-600">
                           {Number(product.priceProducer).toFixed(2)} €

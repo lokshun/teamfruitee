@@ -26,7 +26,7 @@ export default async function ProducerOrdersPage() {
     include: {
       memberOrders: {
         include: {
-          user: { select: { name: true, commune: true } },
+          user: { select: { firstName: true, lastName: true, commune: true } },
           deliveryPoint: { select: { name: true } },
           orderLines: {
             include: {
@@ -123,7 +123,7 @@ export default async function ProducerOrdersPage() {
               {go.memberOrders.map((mo) => (
                 <div key={mo.id} className="px-5 py-3 flex items-center justify-between text-sm">
                   <div>
-                    <p className="font-medium text-gray-900">{mo.user?.name ?? mo.proxyBuyerName ?? "Acheteur"} {mo.user?.commune ? `(${mo.user.commune})` : ""}</p>
+                    <p className="font-medium text-gray-900">{mo.user ? ([mo.user.firstName, mo.user.lastName].filter(Boolean).join(" ").trim() || mo.proxyBuyerName || "Acheteur") : (mo.proxyBuyerName ?? "Acheteur")} {mo.user?.commune ? `(${mo.user.commune})` : ""}</p>
                     <p className="text-xs text-gray-400">📦 {mo.deliveryPoint.name}</p>
                   </div>
                   <p className="font-medium text-gray-900">{formatCurrency(Number(mo.totalAmount))}</p>

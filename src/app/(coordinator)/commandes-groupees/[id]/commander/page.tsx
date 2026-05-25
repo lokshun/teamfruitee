@@ -25,8 +25,8 @@ export default async function CommanderPourAcheteurPage({
     }),
     prisma.user.findMany({
       where: { status: "ACTIVE", role: "MEMBER" },
-      select: { id: true, name: true, commune: true },
-      orderBy: { name: "asc" },
+      select: { id: true, firstName: true, lastName: true, commune: true },
+      orderBy: { lastName: "asc" },
     }),
   ])
 
@@ -61,8 +61,10 @@ export default async function CommanderPourAcheteurPage({
     id: gop.id,
     productId: gop.productId,
     name: gop.product.name,
-    unitType: gop.product.unitType,
+    packagingType: gop.product.packagingType,
+    measureUnit: gop.product.measureUnit,
     unitQuantity: gop.product.unitQuantity,
+    unitsPerPackage: gop.product.unitsPerPackage,
     price: Number(gop.priceOverride ?? gop.product.priceWithTransport),
   }))
 

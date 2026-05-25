@@ -75,16 +75,29 @@ export default function RegisterPage() {
         )}
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Nom complet</label>
-            <input
-              {...register("name")}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-              placeholder="Marie Dupont"
-            />
-            {errors.name && (
-              <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>
-            )}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Prénom</label>
+              <input
+                {...register("firstName")}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                placeholder="Marie"
+              />
+              {errors.firstName && (
+                <p className="text-red-500 text-xs mt-1">{errors.firstName.message}</p>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Nom *</label>
+              <input
+                {...register("lastName")}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                placeholder="Dupont"
+              />
+              {errors.lastName && (
+                <p className="text-red-500 text-xs mt-1">{errors.lastName.message}</p>
+              )}
+            </div>
           </div>
 
           <div>

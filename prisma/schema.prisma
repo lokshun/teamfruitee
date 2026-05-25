@@ -4,9 +4,7 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
 }
 
 // ─── Enums ────────────────────────────────────────────────
@@ -23,10 +21,15 @@ enum UserStatus {
   INACTIVE
 }
 
-enum UnitType {
-  CRATE
+enum PackagingType {
+  CAISSE
+  COLIS
+  CARTON
+  BIDON
+}
+
+enum MeasureUnit {
   KG
-  UNIT
   LITER
 }
 
@@ -54,7 +57,8 @@ enum PaymentMethod {
 model User {
   id             String     @id @default(cuid())
   email          String     @unique
-  name           String
+  firstName      String     @default("")
+  lastName       String
   commune        String?
   hashedPassword String?
   role           Role       @default(MEMBER)
@@ -151,17 +155,19 @@ model Producer {
 }
 
 model Product {
-  id                 String   @id @default(cuid())
+  id                 String        @id @default(cuid())
   name               String
   description        String?
   producerId         String
-  unitType           UnitType
+  packagingType      PackagingType?
+  measureUnit        MeasureUnit   @default(KG)
   unitQuantity       Float
-  priceProducer      Decimal  @db.Decimal(10, 2)
-  priceWithTransport Decimal  @db.Decimal(10, 2)
-  isActive           Boolean  @default(true)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  unitsPerPackage    Int?
+  priceProducer      Decimal       @db.Decimal(10, 2)
+  priceWithTransport Decimal       @db.Decimal(10, 2)
+  isActive           Boolean       @default(true)
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
 
   producer           Producer           @relation(fields: [producerId], references: [id])
   groupOrderProducts GroupOrderProduct[]

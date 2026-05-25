@@ -86,7 +86,7 @@ export async function POST(
         include: {
           orderLines: true,
           deliveryPoint: { select: { name: true } },
-          user: { select: { id: true, name: true } },
+          user: { select: { id: true, firstName: true, lastName: true } },
         },
       })
 

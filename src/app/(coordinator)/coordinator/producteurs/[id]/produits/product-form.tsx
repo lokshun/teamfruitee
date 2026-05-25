@@ -3,16 +3,16 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 
-type SaleMode = "container" | "measure"
-type ContainerType = "CRATE" | "UNIT"
-type MeasureType = "KG" | "LITER"
+type SaleMode = "vrac" | "contenant-global" | "contenant-unites"
+type PackagingType = "CAISSE" | "COLIS" | "CARTON" | "BIDON"
+type MeasureUnit = "KG" | "LITER"
 
-const UNIT_LABEL: Record<string, string> = {
-  CRATE: "caisse",
-  UNIT: "unité",
-  KG: "kg",
-  LITER: "litre",
-}
+const PACKAGING_OPTIONS: { value: PackagingType; label: string; icon: string }[] = [
+  { value: "CAISSE", label: "Caisse", icon: "🧺" },
+  { value: "COLIS", label: "Colis", icon: "📦" },
+  { value: "CARTON", label: "Carton", icon: "🗃️" },
+  { value: "BIDON", label: "Bidon", icon: "🛢️" },
+]
 
 export function ProductForm({ producerId }: { producerId: string }) {
   const router = useRouter()
@@ -21,53 +21,55 @@ export function ProductForm({ producerId }: { producerId: string }) {
 
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
-
-  const [saleMode, setSaleMode] = useState<SaleMode>("container")
-  const [containerType, setContainerType] = useState<ContainerType>("CRATE")
-  const [measureType, setMeasureType] = useState<MeasureType>("KG")
+  const [saleMode, setSaleMode] = useState<SaleMode>("vrac")
+  const [packagingType, setPackagingType] = useState<PackagingType>("CAISSE")
+  const [measureUnit, setMeasureUnit] = useState<MeasureUnit>("KG")
   const [unitQuantity, setUnitQuantity] = useState("1")
-
+  const [unitsPerPackage, setUnitsPerPackage] = useState("6")
   const [priceProducer, setPriceProducer] = useState("")
   const [transportCost, setTransportCost] = useState("")
   const [priceWithTransport, setPriceWithTransport] = useState("")
   const [priceManual, setPriceManual] = useState(false)
 
-  const unitType = saleMode === "container" ? containerType : measureType
-  const unitLabel = UNIT_LABEL[unitType]
+  const unitLabel = measureUnit === "KG" ? "kg" : "L"
 
-  // Auto-calcul prix acheteur
   useEffect(() => {
     if (priceManual) return
     const prod = parseFloat(priceProducer) || 0
     const transport = parseFloat(transportCost) || 0
-    if (prod > 0) {
-      setPriceWithTransport((prod + transport).toFixed(2))
-    } else {
-      setPriceWithTransport("")
-    }
+    if (prod > 0) setPriceWithTransport((prod + transport).toFixed(2))
+    else setPriceWithTransport("")
   }, [priceProducer, transportCost, priceManual])
 
+  function preview(): string {
+    const qty = parseFloat(unitQuantity) || 0
+    const units = parseInt(unitsPerPackage) || 0
+    if (saleMode === "vrac") return qty === 1 ? `Au ${unitLabel}` : `Par ${qty} ${unitLabel}`
+    const pack = PACKAGING_OPTIONS.find((o) => o.value === packagingType)?.label ?? packagingType
+    if (saleMode === "contenant-global") return `${pack} de ${qty} ${unitLabel}`
+    if (units > 0 && qty > 0) return `${pack} · ${units} × ${qty} ${unitLabel} (${units * qty} ${unitLabel})`
+    return `${pack} avec sous-unités`
+  }
+
   function resetForm() {
-    setName("")
-    setDescription("")
-    setSaleMode("container")
-    setContainerType("CRATE")
-    setMeasureType("KG")
-    setUnitQuantity("1")
-    setPriceProducer("")
-    setTransportCost("")
-    setPriceWithTransport("")
-    setPriceManual(false)
+    setName(""); setDescription(""); setSaleMode("vrac"); setPackagingType("CAISSE")
+    setMeasureUnit("KG"); setUnitQuantity("1"); setUnitsPerPackage("6")
+    setPriceProducer(""); setTransportCost(""); setPriceWithTransport(""); setPriceManual(false)
   }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
     const qty = parseFloat(unitQuantity)
     const prod = parseFloat(priceProducer)
-    const transport = parseFloat(priceWithTransport)
+    const buyerPrice = parseFloat(priceWithTransport)
+    const units = parseInt(unitsPerPackage)
 
-    if (!name.trim() || isNaN(qty) || qty <= 0 || isNaN(prod) || prod <= 0 || isNaN(transport) || transport <= 0) {
+    if (!name.trim() || isNaN(qty) || qty <= 0 || isNaN(prod) || prod <= 0 || isNaN(buyerPrice) || buyerPrice <= 0) {
       setError("Veuillez remplir tous les champs obligatoires.")
+      return
+    }
+    if (saleMode === "contenant-unites" && (isNaN(units) || units < 1)) {
+      setError("Le nombre de sous-unités doit être un entier positif.")
       return
     }
 
@@ -81,10 +83,12 @@ export function ProductForm({ producerId }: { producerId: string }) {
         name: name.trim(),
         description: description.trim() || undefined,
         producerId,
-        unitType,
+        packagingType: saleMode === "vrac" ? null : packagingType,
+        measureUnit,
         unitQuantity: qty,
+        unitsPerPackage: saleMode === "contenant-unites" ? units : null,
         priceProducer: prod,
-        priceWithTransport: transport,
+        priceWithTransport: buyerPrice,
       }),
     })
 
@@ -102,214 +106,204 @@ export function ProductForm({ producerId }: { producerId: string }) {
 
   const modeBtn = (active: boolean) =>
     `flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-colors ${
-      active
-        ? "bg-green-600 text-white border-green-600"
-        : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"
+      active ? "bg-green-600 text-white border-green-600" : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"
     }`
 
-  const typeBtn = (active: boolean) =>
-    `flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-colors ${
-      active
-        ? "bg-blue-50 text-blue-700 border-blue-400"
-        : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"
+  const selectBtn = (active: boolean) =>
+    `flex-1 py-2 px-2 rounded-lg border text-sm font-medium transition-colors ${
+      active ? "bg-blue-50 text-blue-700 border-blue-400" : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"
     }`
 
   return (
     <form onSubmit={onSubmit} className="space-y-5">
-      {error && (
-        <div className="p-3 bg-red-50 text-red-700 rounded-lg text-xs">{error}</div>
-      )}
+      {error && <div className="p-3 bg-red-50 text-red-700 rounded-lg text-xs">{error}</div>}
 
-      {/* Nom */}
       <div>
-        <label className="block text-xs font-medium text-gray-700 mb-1">
-          Nom <span className="text-red-500">*</span>
-        </label>
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
+        <label className="block text-xs font-medium text-gray-700 mb-1">Nom <span className="text-red-500">*</span></label>
+        <input value={name} onChange={(e) => setName(e.target.value)}
           className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-          placeholder="Tomates cerises"
-        />
+          placeholder="Huile d'olive, Tomates cerises…" />
       </div>
 
-      {/* Description */}
       <div>
         <label className="block text-xs font-medium text-gray-700 mb-1">Description</label>
-        <textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          rows={2}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-        />
+        <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
       </div>
 
       {/* Mode de vente */}
       <div>
         <p className="text-xs font-medium text-gray-700 mb-2">Mode de vente <span className="text-red-500">*</span></p>
-        <div className="flex gap-2">
-          <button type="button" onClick={() => setSaleMode("container")} className={modeBtn(saleMode === "container")}>
-            📦 Par contenant
+        <div className="flex gap-2 flex-wrap">
+          <button type="button" onClick={() => setSaleMode("vrac")} className={modeBtn(saleMode === "vrac")}>
+            ⚖️ Vrac (kg / L)
           </button>
-          <button type="button" onClick={() => setSaleMode("measure")} className={modeBtn(saleMode === "measure")}>
-            ⚖️ Au poids / volume
+          <button type="button" onClick={() => setSaleMode("contenant-global")} className={modeBtn(saleMode === "contenant-global")}>
+            🛢️ Contenant (bidon 5L…)
+          </button>
+          <button type="button" onClick={() => setSaleMode("contenant-unites")} className={modeBtn(saleMode === "contenant-unites")}>
+            📦 Contenant + sous-unités
           </button>
         </div>
       </div>
 
-      {/* Par contenant */}
-      {saleMode === "container" && (
-        <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-          <div>
-            <p className="text-xs font-medium text-gray-700 mb-2">Type de contenant <span className="text-red-500">*</span></p>
-            <div className="flex gap-2">
-              <button type="button" onClick={() => setContainerType("CRATE")} className={typeBtn(containerType === "CRATE")}>
-                🧺 Caisse
-              </button>
-              <button type="button" onClick={() => setContainerType("UNIT")} className={typeBtn(containerType === "UNIT")}>
-                📋 Unité / Lot
-              </button>
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
-              Nombre d&apos;éléments par {containerType === "CRATE" ? "caisse" : "lot"} <span className="text-red-500">*</span>
-            </label>
-            <div className="flex items-center gap-2">
-              <input
-                type="number"
-                step="0.01"
-                min="0.01"
-                value={unitQuantity}
-                onChange={(e) => setUnitQuantity(e.target.value)}
-                className="w-28 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                placeholder="5"
-              />
-              <span className="text-sm text-gray-500">éléments / {containerType === "CRATE" ? "caisse" : "lot"}</span>
-            </div>
+      {/* Unité de mesure (toujours visible) */}
+      <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+        <div>
+          <p className="text-xs font-medium text-gray-700 mb-2">Unité de mesure</p>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => setMeasureUnit("KG")} className={selectBtn(measureUnit === "KG")}>
+              Kilogramme (kg)
+            </button>
+            <button type="button" onClick={() => setMeasureUnit("LITER")} className={selectBtn(measureUnit === "LITER")}>
+              Litre (L)
+            </button>
           </div>
         </div>
-      )}
 
-      {/* Au poids / volume */}
-      {saleMode === "measure" && (
-        <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-          <div>
-            <p className="text-xs font-medium text-gray-700 mb-2">Unité de mesure <span className="text-red-500">*</span></p>
-            <div className="flex gap-2">
-              <button type="button" onClick={() => setMeasureType("KG")} className={typeBtn(measureType === "KG")}>
-                Kilogramme (kg)
-              </button>
-              <button type="button" onClick={() => setMeasureType("LITER")} className={typeBtn(measureType === "LITER")}>
-                Litre (L)
-              </button>
-            </div>
-          </div>
+        {/* Vrac */}
+        {saleMode === "vrac" && (
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">
-              Quantité minimale par commande <span className="text-red-500">*</span>
+              Vendu par <span className="text-red-500">*</span>
             </label>
             <div className="flex items-center gap-2">
-              <input
-                type="number"
-                step="0.01"
-                min="0.01"
-                value={unitQuantity}
+              <input type="number" step="0.01" min="0.01" value={unitQuantity}
                 onChange={(e) => setUnitQuantity(e.target.value)}
-                className="w-28 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                placeholder="1"
-              />
-              <span className="text-sm text-gray-500">{measureType === "KG" ? "kg" : "litre(s)"}</span>
+                className="w-28 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+              <span className="text-sm text-gray-500">{unitLabel} par unité commandée</span>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Tarification */}
+        {/* Contenant global (bidon de 5L) */}
+        {saleMode === "contenant-global" && (
+          <>
+            <div>
+              <p className="text-xs font-medium text-gray-700 mb-2">Type de contenant <span className="text-red-500">*</span></p>
+              <div className="flex gap-2 flex-wrap">
+                {PACKAGING_OPTIONS.map((o) => (
+                  <button key={o.value} type="button" onClick={() => setPackagingType(o.value)}
+                    className={selectBtn(packagingType === o.value)}>
+                    {o.icon} {o.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Contenu total <span className="text-red-500">*</span>
+              </label>
+              <div className="flex items-center gap-2">
+                <input type="number" step="0.01" min="0.01" value={unitQuantity}
+                  onChange={(e) => setUnitQuantity(e.target.value)}
+                  className="w-28 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  placeholder="5" />
+                <span className="text-sm text-gray-500">{unitLabel} par contenant</span>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Contenant avec sous-unités (carton de 6 × 1L) */}
+        {saleMode === "contenant-unites" && (
+          <>
+            <div>
+              <p className="text-xs font-medium text-gray-700 mb-2">Type de contenant <span className="text-red-500">*</span></p>
+              <div className="flex gap-2 flex-wrap">
+                {PACKAGING_OPTIONS.map((o) => (
+                  <button key={o.value} type="button" onClick={() => setPackagingType(o.value)}
+                    className={selectBtn(packagingType === o.value)}>
+                    {o.icon} {o.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  Nombre de sous-unités <span className="text-red-500">*</span>
+                </label>
+                <div className="flex items-center gap-2">
+                  <input type="number" step="1" min="1" value={unitsPerPackage}
+                    onChange={(e) => setUnitsPerPackage(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    placeholder="6" />
+                </div>
+                <p className="text-xs text-gray-400 mt-1">ex: 6 bouteilles</p>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  Quantité par sous-unité <span className="text-red-500">*</span>
+                </label>
+                <div className="flex items-center gap-2">
+                  <input type="number" step="0.01" min="0.01" value={unitQuantity}
+                    onChange={(e) => setUnitQuantity(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    placeholder="1" />
+                  <span className="text-sm text-gray-500 shrink-0">{unitLabel}</span>
+                </div>
+                <p className="text-xs text-gray-400 mt-1">ex: 1 L par bouteille</p>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Aperçu */}
+      <div className="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+        Aperçu : <span className="font-medium text-gray-800">{preview()}</span>
+      </div>
+
+      {/* Prix */}
       <div className="bg-amber-50 border border-amber-100 rounded-lg p-4 space-y-3">
-        <p className="text-xs font-medium text-gray-700">Tarification <span className="text-gray-400 font-normal">(par {unitLabel})</span></p>
-
+        <p className="text-xs font-medium text-gray-700">
+          Tarification <span className="text-gray-400 font-normal">(par unité commandée)</span>
+        </p>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
-              Prix producteur (€) <span className="text-red-500">*</span>
-            </label>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Prix producteur (€) <span className="text-red-500">*</span></label>
             <div className="relative">
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={priceProducer}
+              <input type="number" step="0.01" min="0" value={priceProducer}
                 onChange={(e) => { setPriceProducer(e.target.value); setPriceManual(false) }}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
-                placeholder="8.00"
-              />
+                placeholder="8.00" />
               <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs">€</span>
             </div>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
-              Coût transport (€)
-            </label>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Coût transport (€)</label>
             <div className="relative">
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={transportCost}
+              <input type="number" step="0.01" min="0" value={transportCost}
                 onChange={(e) => { setTransportCost(e.target.value); setPriceManual(false) }}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
-                placeholder="1.50"
-              />
+                placeholder="1.50" />
               <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs">€</span>
             </div>
           </div>
         </div>
-
         <div>
           <label className="block text-xs font-medium text-gray-700 mb-1">
-            Prix acheteur (€ / {unitLabel}) <span className="text-red-500">*</span>
+            Prix acheteur (€) <span className="text-red-500">*</span>
             {!priceManual && <span className="text-gray-400 font-normal ml-1">— calculé automatiquement</span>}
           </label>
           <div className="relative">
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              value={priceWithTransport}
+            <input type="number" step="0.01" min="0" value={priceWithTransport}
               onChange={(e) => { setPriceWithTransport(e.target.value); setPriceManual(true) }}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white font-medium"
-              placeholder="9.50"
-            />
+              placeholder="9.50" />
             <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs">€</span>
           </div>
           {priceManual && (
-            <button
-              type="button"
-              onClick={() => setPriceManual(false)}
-              className="text-xs text-blue-600 hover:underline mt-1"
-            >
+            <button type="button" onClick={() => setPriceManual(false)} className="text-xs text-blue-600 hover:underline mt-1">
               Recalculer automatiquement
             </button>
           )}
         </div>
-
-        {/* Récapitulatif */}
-        {priceProducer && priceWithTransport && unitQuantity && (
-          <div className="text-xs text-gray-600 bg-white rounded-lg px-3 py-2 border border-amber-200">
-            {saleMode === "container"
-              ? `1 ${unitLabel} (${unitQuantity} éléments) → ${parseFloat(priceProducer).toFixed(2)} € prod. / ${parseFloat(priceWithTransport).toFixed(2)} € acheteur`
-              : `1 ${unitLabel} → ${parseFloat(priceProducer).toFixed(2)} € prod. / ${parseFloat(priceWithTransport).toFixed(2)} € acheteur`
-            }
-          </div>
-        )}
       </div>
 
-      <button
-        type="submit"
-        disabled={loading}
-        className="w-full bg-green-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-green-700 disabled:opacity-50 transition-colors"
-      >
+      <button type="submit" disabled={loading}
+        className="w-full bg-green-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-green-700 disabled:opacity-50 transition-colors">
         {loading ? "Ajout en cours..." : "Ajouter le produit"}
       </button>
     </form>

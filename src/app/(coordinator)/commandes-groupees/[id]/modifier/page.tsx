@@ -32,8 +32,10 @@ export default async function ModifierCommandeGroupeePage({
               select: {
                 id: true,
                 name: true,
+                packagingType: true,
+                measureUnit: true,
                 unitQuantity: true,
-                unitType: true,
+                unitsPerPackage: true,
                 priceWithTransport: true,
               },
               orderBy: { name: "asc" },
@@ -58,8 +60,8 @@ export default async function ModifierCommandeGroupeePage({
     }),
     prisma.user.findMany({
       where: { status: "ACTIVE" },
-      select: { id: true, name: true, commune: true, role: true },
-      orderBy: { name: "asc" },
+      select: { id: true, firstName: true, lastName: true, commune: true, role: true },
+      orderBy: { lastName: "asc" },
     }),
   ])
 

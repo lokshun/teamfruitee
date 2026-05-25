@@ -1,12 +1,6 @@
 import { prisma } from "@/lib/prisma"
 import { formatCurrency, formatDate } from "@/lib/utils"
-
-const unitTypeLabels: Record<string, string> = {
-  CRATE: "Caisse",
-  KG: "kg",
-  UNIT: "Unité",
-  LITER: "Litre",
-}
+import { formatProductUnit } from "@/lib/product-utils"
 
 export default async function CataloguePage() {
   const openGroupOrders = await prisma.groupOrder.findMany({
@@ -73,7 +67,7 @@ export default async function CataloguePage() {
                         <p className="text-xs text-gray-500">{product.description}</p>
                       )}
                       <p className="text-xs text-gray-400 mt-0.5">
-                        {product.unitQuantity} {unitTypeLabels[product.unitType] ?? product.unitType}
+                        {formatProductUnit(product)}
                       </p>
                     </div>
                     <div className="text-right">

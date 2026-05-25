@@ -21,6 +21,10 @@ export function formatDate(date: Date | string): string {
   }).format(new Date(date))
 }
 
+export function fullName(user: { firstName: string; lastName: string }): string {
+  return [user.firstName, user.lastName].filter(Boolean).join(" ").trim()
+}
+
 export function formatDateTime(date: Date | string): string {
   return new Intl.DateTimeFormat("fr-FR", {
     day: "2-digit",

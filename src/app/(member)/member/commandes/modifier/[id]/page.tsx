@@ -27,7 +27,7 @@ export default async function ModifierCommandePage({
           products: {
             include: { product: true },
           },
-          paymentReferents: { select: { id: true, name: true } },
+          paymentReferents: { select: { id: true, firstName: true, lastName: true } },
         },
       },
     },

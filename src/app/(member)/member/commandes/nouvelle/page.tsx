@@ -19,7 +19,7 @@ export default async function NouvelleCommandePage({
         include: { product: true },
       },
       deliveryPoints: { select: { id: true } },
-      paymentReferents: { select: { id: true, name: true } },
+      paymentReferents: { select: { id: true, firstName: true, lastName: true } },
     },
   })
 

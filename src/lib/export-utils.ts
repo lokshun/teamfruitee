@@ -26,7 +26,7 @@ export async function getGroupOrderExportData(groupOrderId: string): Promise<Gro
       producer: { select: { name: true } },
       memberOrders: {
         include: {
-          user: { select: { name: true, commune: true } },
+          user: { select: { firstName: true, lastName: true, commune: true } },
           deliveryPoint: { select: { name: true } },
           orderLines: {
             include: {
@@ -47,7 +47,7 @@ export async function getGroupOrderExportData(groupOrderId: string): Promise<Gro
     producerName: groupOrder.producer.name,
     deliveryDate: groupOrder.deliveryDate,
     memberOrders: groupOrder.memberOrders.map((mo) => ({
-      memberName: mo.user?.name ?? mo.proxyBuyerName ?? "Acheteur",
+      memberName: mo.user ? ([mo.user.firstName, mo.user.lastName].filter(Boolean).join(" ").trim() || mo.proxyBuyerName || "Acheteur") : (mo.proxyBuyerName ?? "Acheteur"),
       commune: mo.user?.commune ?? null,
       deliveryPoint: mo.deliveryPoint.name,
       lines: mo.orderLines.map((ol) => ({

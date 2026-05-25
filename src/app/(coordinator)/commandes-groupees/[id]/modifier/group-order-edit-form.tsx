@@ -3,8 +3,8 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Trash2, Lock, Plus, X } from "lucide-react"
+import { formatProductUnit } from "@/lib/product-utils"
 
-const unitLabels: Record<string, string> = { CRATE: "Caisse", KG: "kg", UNIT: "Unité", LITER: "L" }
 
 interface GroupOrderData {
   id: string
@@ -29,7 +29,8 @@ interface DeliveryPoint {
 
 interface User {
   id: string
-  name: string
+  firstName: string
+  lastName: string
   commune: string | null
   role: string
 }
@@ -37,8 +38,10 @@ interface User {
 interface Product {
   id: string
   name: string
+  packagingType: string | null
+  measureUnit: string
   unitQuantity: number
-  unitType: string
+  unitsPerPackage: number | null
   priceWithTransport: number
 }
 
@@ -280,7 +283,7 @@ export function GroupOrderEditForm({
                   </span>
                 )}
                 <span className="text-xs text-gray-400">
-                  {p.unitQuantity}&nbsp;{unitLabels[p.unitType]}&nbsp;—&nbsp;{p.priceWithTransport.toFixed(2)}&nbsp;€
+                  {formatProductUnit(p)}&nbsp;—&nbsp;{p.priceWithTransport.toFixed(2)}&nbsp;€
                 </span>
               </label>
             )
@@ -424,7 +427,7 @@ export function GroupOrderEditForm({
             <option value="">Aucun</option>
             {users.map((u) => (
               <option key={u.id} value={u.id}>
-                {u.name}{u.commune ? ` (${u.commune})` : ""}
+                {[u.firstName, u.lastName].filter(Boolean).join(" ")}{u.commune ? ` (${u.commune})` : ""}
               </option>
             ))}
           </select>
@@ -450,7 +453,7 @@ export function GroupOrderEditForm({
                 className="rounded text-green-600"
               />
               <span className="text-sm text-gray-900">
-                {u.name}
+                {[u.firstName, u.lastName].filter(Boolean).join(" ")}
                 {u.commune ? <span className="text-gray-400"> ({u.commune})</span> : null}
                 <span className="ml-1 text-xs text-gray-400">[{u.role}]</span>
               </span>

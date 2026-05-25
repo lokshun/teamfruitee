@@ -5,7 +5,7 @@ import { DocumentList } from "./document-list"
 export default async function DocumentsPage() {
   const rawDocuments = await prisma.document.findMany({
     orderBy: { createdAt: "desc" },
-    include: { addedByUser: { select: { name: true } } },
+    include: { addedByUser: { select: { firstName: true, lastName: true } } },
   })
 
   const documents = rawDocuments.map((d) => ({

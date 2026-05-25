@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma"
-import { formatDate } from "@/lib/utils"
+import { formatDate, fullName } from "@/lib/utils"
 import { MemberActions } from "./member-actions"
 
 export default async function MembresPage({
@@ -17,12 +17,14 @@ export default async function MembresPage({
     select: {
       id: true,
       email: true,
-      name: true,
+      firstName: true,
+      lastName: true,
       commune: true,
       status: true,
+      role: true,
       createdAt: true,
     },
-    orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+    orderBy: [{ status: "asc" }, { lastName: "asc" }],
   })
 
   const statusLabel: Record<string, string> = {
@@ -65,7 +67,7 @@ export default async function MembresPage({
             <div key={user.id} className="p-4 space-y-2">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="font-semibold text-gray-900 truncate">{user.name}</p>
+                  <p className="font-semibold text-gray-900 truncate">{fullName(user)}</p>
                   <p className="text-sm text-gray-500 truncate">{user.email}</p>
                   {user.commune && (
                     <p className="text-xs text-gray-400">{user.commune}</p>
@@ -77,7 +79,15 @@ export default async function MembresPage({
               </div>
               <div className="flex items-center justify-between">
                 <p className="text-xs text-gray-400">Inscrit le {formatDate(user.createdAt)}</p>
-                <MemberActions userId={user.id} currentStatus={user.status} />
+                <MemberActions
+                  userId={user.id}
+                  currentStatus={user.status}
+                  currentRole={user.role}
+                  currentFirstName={user.firstName}
+                  currentLastName={user.lastName}
+                  currentEmail={user.email}
+                  currentCommune={user.commune}
+                />
               </div>
             </div>
           ))}
@@ -102,7 +112,7 @@ export default async function MembresPage({
             <tbody className="divide-y divide-gray-100">
               {users.map((user) => (
                 <tr key={user.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium text-gray-900">{user.name}</td>
+                  <td className="px-4 py-3 font-medium text-gray-900">{fullName(user)}</td>
                   <td className="px-4 py-3 text-gray-600">{user.email}</td>
                   <td className="px-4 py-3 text-gray-600">{user.commune ?? "—"}</td>
                   <td className="px-4 py-3 text-gray-600">{formatDate(user.createdAt)}</td>
@@ -112,7 +122,15 @@ export default async function MembresPage({
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <MemberActions userId={user.id} currentStatus={user.status} />
+                    <MemberActions
+                      userId={user.id}
+                      currentStatus={user.status}
+                      currentRole={user.role}
+                      currentFirstName={user.firstName}
+                      currentLastName={user.lastName}
+                      currentEmail={user.email}
+                      currentCommune={user.commune}
+                    />
                   </td>
                 </tr>
               ))}

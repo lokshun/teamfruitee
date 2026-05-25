@@ -28,7 +28,7 @@ export default async function HistoriquePage() {
       orderLines: {
         include: {
           groupOrderProduct: {
-            include: { product: { select: { name: true, unitType: true } } },
+            include: { product: { select: { name: true } } },
           },
         },
       },

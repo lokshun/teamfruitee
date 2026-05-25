@@ -5,13 +5,16 @@ import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { groupOrderSchema, GroupOrderInput } from "@/lib/validations/order"
+import { formatProductUnit } from "@/lib/product-utils"
 import { Plus, X } from "lucide-react"
 
 interface Product {
   id: string
   name: string
+  packagingType: string | null
+  measureUnit: string
   unitQuantity: number
-  unitType: string
+  unitsPerPackage: number | null
   priceWithTransport: number | { toString(): string }
 }
 
@@ -29,7 +32,8 @@ interface DeliveryPoint {
 
 interface User {
   id: string
-  name: string
+  firstName: string
+  lastName: string
   commune: string | null
   role: string
 }
@@ -127,8 +131,6 @@ export function NewGroupOrderForm({ producers, deliveryPoints: initialDeliveryPo
     router.refresh()
   }
 
-  const unitLabels: Record<string, string> = { CRATE: "Caisse", KG: "kg", UNIT: "Unité", LITER: "Litre" }
-
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-5">
       {error && (
@@ -170,7 +172,7 @@ export function NewGroupOrderForm({ producers, deliveryPoints: initialDeliveryPo
                 />
                 <span className="flex-1 text-sm font-medium text-gray-900">{product.name}</span>
                 <span className="text-sm text-gray-500">
-                  {product.unitQuantity} {unitLabels[product.unitType]} — {Number(product.priceWithTransport).toFixed(2)} €
+                  {formatProductUnit(product)} — {Number(product.priceWithTransport).toFixed(2)} €
                 </span>
               </label>
             ))}
@@ -331,7 +333,7 @@ export function NewGroupOrderForm({ producers, deliveryPoints: initialDeliveryPo
             <option value="">Aucun</option>
             {users.map((u) => (
               <option key={u.id} value={u.id}>
-                {u.name}{u.commune ? ` (${u.commune})` : ""}
+                {[u.firstName, u.lastName].filter(Boolean).join(" ")}{u.commune ? ` (${u.commune})` : ""}
               </option>
             ))}
           </select>
@@ -357,7 +359,7 @@ export function NewGroupOrderForm({ producers, deliveryPoints: initialDeliveryPo
                 className="rounded text-green-600"
               />
               <span className="text-sm text-gray-900">
-                {u.name}
+                {[u.firstName, u.lastName].filter(Boolean).join(" ")}
                 {u.commune ? <span className="text-gray-400"> ({u.commune})</span> : null}
                 <span className="ml-1 text-xs text-gray-400">[{u.role}]</span>
               </span>

@@ -17,8 +17,8 @@ export default async function NouvelleCommandeGroupeePage() {
     }),
     prisma.user.findMany({
       where: { status: "ACTIVE" },
-      select: { id: true, name: true, commune: true, role: true },
-      orderBy: { name: "asc" },
+      select: { id: true, firstName: true, lastName: true, commune: true, role: true },
+      orderBy: { lastName: "asc" },
     }),
   ])
 

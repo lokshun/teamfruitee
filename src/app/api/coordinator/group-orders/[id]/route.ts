@@ -169,12 +169,12 @@ export async function GET(
       },
       memberOrders: {
         include: {
-          user: { select: { id: true, name: true, commune: true } },
+          user: { select: { id: true, firstName: true, lastName: true, commune: true } },
           deliveryPoint: { select: { name: true, commune: true } },
           orderLines: {
             include: {
               groupOrderProduct: {
-                include: { product: { select: { name: true, unitType: true } } },
+                include: { product: { select: { name: true } } },
               },
             },
           },

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma"
-import { formatCurrency, formatDate } from "@/lib/utils"
+import { formatCurrency, formatDate, fullName } from "@/lib/utils"
+import { formatProductUnit } from "@/lib/product-utils"
 import { STATUS_LABELS, STATUS_COLORS } from "@/lib/calendar-utils"
 import { GroupOrderStatus } from "@/generated/prisma/client"
 import { notFound } from "next/navigation"
@@ -35,14 +36,14 @@ export default async function GroupOrderDetailPage({
     include: {
       producer: true,
       products: { include: { product: true } },
-      transportUser: { select: { name: true } },
+      transportUser: { select: { firstName: true, lastName: true } },
       deliveryPoints: { select: { id: true, name: true, commune: true } },
-      paymentReferents: { select: { id: true, name: true } },
+      paymentReferents: { select: { id: true, firstName: true, lastName: true } },
       memberOrders: {
         include: {
-          user: { select: { name: true, commune: true } },
+          user: { select: { firstName: true, lastName: true, commune: true } },
           deliveryPoint: { select: { name: true } },
-          paymentReferent: { select: { name: true } },
+          paymentReferent: { select: { firstName: true, lastName: true } },
           orderLines: {
             include: {
               groupOrderProduct: { include: { product: { select: { name: true } } } },
@@ -158,7 +159,7 @@ export default async function GroupOrderDetailPage({
           {groupOrder.transportUser && (
             <div className="flex items-center gap-2 text-sm">
               <span className="text-gray-400">Responsable transport :</span>
-              <span className="font-medium text-gray-900">{groupOrder.transportUser.name}</span>
+              <span className="font-medium text-gray-900">{fullName(groupOrder.transportUser)}</span>
             </div>
           )}
           {groupOrder.paymentReferents.length > 0 && (
@@ -167,7 +168,7 @@ export default async function GroupOrderDetailPage({
               <div className="flex flex-wrap gap-1">
                 {groupOrder.paymentReferents.map((r) => (
                   <span key={r.id} className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full text-xs font-medium">
-                    {r.name}
+                    {fullName(r)}
                   </span>
                 ))}
               </div>
@@ -220,14 +221,12 @@ export default async function GroupOrderDetailPage({
           </h2>
           <div className="divide-y divide-gray-50">
             {groupOrder.products.map((gop) => {
-              const unitLabels: Record<string, string> = { CRATE: "Caisse", KG: "kg", UNIT: "Unité", LITER: "L" }
               const price = Number(gop.priceOverride ?? gop.product.priceWithTransport)
               return (
                 <div key={gop.id} className="py-2 flex items-center justify-between text-sm">
                   <span className="font-medium text-gray-900">{gop.product.name}</span>
                   <span className="text-gray-500">
-                    {gop.product.unitQuantity}&nbsp;{unitLabels[gop.product.unitType]}
-                    &nbsp;—&nbsp;{formatCurrency(price)}
+                    {formatProductUnit(gop.product)}&nbsp;—&nbsp;{formatCurrency(price)}
                   </span>
                 </div>
               )
@@ -279,7 +278,7 @@ export default async function GroupOrderDetailPage({
             const isProxy = !mo.userId
             const buyerName = isProxy
               ? (mo.proxyBuyerName ?? "Acheteur sans compte")
-              : (mo.user?.name ?? "Membre inconnu")
+              : (mo.user ? fullName(mo.user) : "Membre inconnu")
             const buyerCommune = mo.user?.commune
 
             return (
@@ -297,7 +296,7 @@ export default async function GroupOrderDetailPage({
                     </p>
                     <p className="text-sm text-gray-500">📦 {mo.deliveryPoint.name}</p>
                     {mo.paymentReferent && (
-                      <p className="text-sm text-gray-500">💶 {mo.paymentReferent.name}</p>
+                      <p className="text-sm text-gray-500">💶 {fullName(mo.paymentReferent)}</p>
                     )}
                     {mo.paymentMethod && (
                       <p className="text-sm text-gray-500">

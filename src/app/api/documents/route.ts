@@ -22,7 +22,7 @@ export async function GET() {
       fileSize: true,
       allowedRoles: true,
       createdAt: true,
-      addedByUser: { select: { name: true } },
+      addedByUser: { select: { firstName: true, lastName: true } },
     },
   })
 

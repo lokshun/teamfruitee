@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { formatCurrency } from "@/lib/utils"
 import { computeLineTotal, computeOrderTotal } from "@/lib/price-utils"
+import { formatProductUnit, formatOrderUnit } from "@/lib/product-utils"
 
 interface GroupOrderProduct {
   id: string
@@ -11,8 +12,10 @@ interface GroupOrderProduct {
   product: {
     name: string
     description: string | null
-    unitType: string
+    packagingType: string | null
+    measureUnit: string
     unitQuantity: number
+    unitsPerPackage: number | null
     priceWithTransport: number | { toString(): string }
   }
 }
@@ -30,15 +33,10 @@ interface DeliveryPoint {
 
 interface PaymentReferent {
   id: string
-  name: string
+  firstName: string
+  lastName: string
 }
 
-const unitLabels: Record<string, string> = {
-  CRATE: "caisse",
-  KG: "kg",
-  UNIT: "unité",
-  LITER: "litre",
-}
 
 export function MemberOrderForm({
   groupOrder,
@@ -129,9 +127,8 @@ export function MemberOrderForm({
                 {gop.product.description && (
                   <p className="text-xs text-gray-500">{gop.product.description}</p>
                 )}
-                <p className="text-sm text-gray-500">
-                  {gop.product.unitQuantity} {unitLabels[gop.product.unitType]} — {formatCurrency(price)}
-                </p>
+                <p className="text-xs text-gray-400">{formatProductUnit(gop.product)}</p>
+                <p className="text-sm font-medium text-gray-700">{formatCurrency(price)} / {formatOrderUnit(gop.product)}</p>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -187,7 +184,7 @@ export function MemberOrderForm({
           >
             <option value="">Choisir un référent…</option>
             {paymentReferents.map((r) => (
-              <option key={r.id} value={r.id}>{r.name}</option>
+              <option key={r.id} value={r.id}>{[r.firstName, r.lastName].filter(Boolean).join(" ")}</option>
             ))}
           </select>
         </div>

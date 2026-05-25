@@ -13,12 +13,13 @@ export async function GET() {
     select: {
       id: true,
       email: true,
-      name: true,
+      firstName: true,
+      lastName: true,
       commune: true,
       status: true,
       createdAt: true,
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: { lastName: "asc" },
   })
 
   return NextResponse.json(users)

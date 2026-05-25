@@ -16,7 +16,8 @@ async function main() {
     update: {},
     create: {
       email,
-      name: "Coordinateur Principal",
+      firstName: "Coordinateur",
+      lastName: "Principal",
       role: "COORDINATOR",
       status: "ACTIVE",
       hashedPassword,

@@ -9,7 +9,7 @@ export default async function PaiementsPage() {
       producer: { select: { name: true } },
       memberOrders: {
         include: {
-          user: { select: { name: true, commune: true } },
+          user: { select: { firstName: true, lastName: true, commune: true } },
           deliveryPoint: { select: { name: true } },
         },
         orderBy: { paymentStatus: "asc" },
@@ -80,7 +80,7 @@ export default async function PaiementsPage() {
                   <tr key={mo.id}>
                     <td className="px-5 py-3">
                       <p className="font-medium text-gray-900">
-                        {mo.user?.name ?? mo.proxyBuyerName ?? "Acheteur"}
+                        {mo.user ? ([mo.user.firstName, mo.user.lastName].filter(Boolean).join(" ").trim() || mo.proxyBuyerName || "Acheteur") : (mo.proxyBuyerName ?? "Acheteur")}
                       </p>
                       {mo.user?.commune && (
                         <p className="text-xs text-gray-400">{mo.user.commune}</p>

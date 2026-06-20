@@ -32,6 +32,11 @@ export default auth((req) => {
     return NextResponse.redirect(new URL("/login?error=inactive", req.url))
   }
 
+  // Changement de mot de passe obligatoire (sauf pour les routes API)
+  if (session.user.mustChangePassword && !pathname.startsWith("/change-password") && !pathname.startsWith("/api/")) {
+    return NextResponse.redirect(new URL("/change-password", req.url))
+  }
+
   // Protection par rôle
   if (pathname.startsWith("/coordinator") && session.user.role !== "COORDINATOR") {
     return NextResponse.redirect(new URL("/unauthorized", req.url))

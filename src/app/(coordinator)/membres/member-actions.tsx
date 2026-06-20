@@ -26,6 +26,7 @@ export function MemberActions({
   const [loading, setLoading] = useState(false)
   const [showEdit, setShowEdit] = useState(false)
   const [showDelete, setShowDelete] = useState(false)
+  const [tempPassword, setTempPassword] = useState<string | null>(null)
   const [editError, setEditError] = useState("")
   const [deleteError, setDeleteError] = useState("")
   const [form, setForm] = useState({
@@ -38,6 +39,25 @@ export function MemberActions({
   })
 
   const displayName = [currentFirstName, currentLastName].filter(Boolean).join(" ").trim()
+
+  async function requestPasswordReset() {
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/coordinator/users/${userId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "reset-password" }),
+      })
+      const text = await res.text()
+      if (!text) return
+      const data = JSON.parse(text)
+      if (data.tempPassword) {
+        setTempPassword(data.tempPassword)
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
 
   async function updateUser(status: "ACTIVE" | "INACTIVE" | "PENDING", role?: "MEMBER" | "COORDINATOR") {
     setLoading(true)
@@ -146,6 +166,13 @@ export function MemberActions({
           </button>
         )}
 
+        {currentStatus === "ACTIVE" && (
+          <button onClick={requestPasswordReset} disabled={loading}
+            className="px-3 py-1 bg-orange-50 text-orange-700 text-xs rounded-lg hover:bg-orange-100 disabled:opacity-50">
+            Réinitialiser MDP
+          </button>
+        )}
+
         <button onClick={openEdit} disabled={loading}
           className="px-3 py-1 bg-indigo-50 text-indigo-700 text-xs rounded-lg hover:bg-indigo-100 disabled:opacity-50">
           Éditer
@@ -224,6 +251,39 @@ export function MemberActions({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modale mot de passe temporaire */}
+      {tempPassword && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm">
+            <div className="px-6 py-5">
+              <h2 className="text-base font-semibold text-gray-900 mb-2">Mot de passe temporaire généré</h2>
+              <p className="text-sm text-gray-600 mb-4">
+                Communiquez ce mot de passe à <strong>{displayName}</strong>. À la prochaine connexion, il sera invité à en choisir un nouveau.
+              </p>
+              <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-4 py-3">
+                <span className="flex-1 font-mono text-lg font-semibold tracking-widest text-gray-900 select-all">
+                  {tempPassword}
+                </span>
+                <button
+                  onClick={() => navigator.clipboard.writeText(tempPassword)}
+                  className="text-xs px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded text-gray-700"
+                >
+                  Copier
+                </button>
+              </div>
+            </div>
+            <div className="px-6 pb-5">
+              <button
+                onClick={() => { setTempPassword(null); router.refresh() }}
+                className="w-full px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700"
+              >
+                Fermer
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -3,6 +3,15 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { Resend } from "resend"
 import { z } from "zod"
+import bcrypt from "bcryptjs"
+
+// Caractères sans ambiguïté visuelle (pas de 0/O, l/1, I)
+const TEMP_CHARS = "abcdefghjkmnpqrstuvwxyz23456789"
+function generateTempPassword(length = 10): string {
+  return Array.from({ length }, () =>
+    TEMP_CHARS[Math.floor(Math.random() * TEMP_CHARS.length)]
+  ).join("")
+}
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -22,6 +31,25 @@ export async function PATCH(
 
   const { id } = await params
   const body = await req.json()
+
+  // Action spéciale : générer un mot de passe temporaire
+  if (body.action === "reset-password") {
+    try {
+      const user = await prisma.user.findUnique({ where: { id } })
+      if (!user) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 })
+      const tempPassword = generateTempPassword()
+      const hashedPassword = await bcrypt.hash(tempPassword, 12)
+      await prisma.user.update({
+        where: { id },
+        data: { hashedPassword, mustChangePassword: true },
+      })
+      return NextResponse.json({ tempPassword })
+    } catch (err) {
+      console.error("[RESET_PASSWORD]", err)
+      return NextResponse.json({ error: "Erreur serveur lors de la réinitialisation" }, { status: 500 })
+    }
+  }
+
   const parsed = updateSchema.safeParse(body)
 
   if (!parsed.success) {

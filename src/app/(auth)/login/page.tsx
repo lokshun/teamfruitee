@@ -18,6 +18,7 @@ function LoginForm() {
 
   const verify = searchParams.get("verify")
   const errorParam = searchParams.get("error")
+  const changed = searchParams.get("changed")
 
   const {
     register,
@@ -50,6 +51,12 @@ function LoginForm() {
       <div className="w-full max-w-md bg-white rounded-xl shadow-md p-6 sm:p-8">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Connexion</h1>
         <p className="text-gray-500 mb-6">Team Fruitée</p>
+
+        {changed && (
+          <div className="mb-4 p-3 bg-green-50 text-green-700 rounded-lg text-sm">
+            Mot de passe modifié avec succès. Connectez-vous avec votre nouveau mot de passe.
+          </div>
+        )}
 
         {verify && (
           <div className="mb-4 p-3 bg-blue-50 text-blue-700 rounded-lg text-sm">

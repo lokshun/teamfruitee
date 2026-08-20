@@ -11,7 +11,7 @@ export default async function MembresPage({
 
   const users = await prisma.user.findMany({
     where: {
-      role: "MEMBER",
+      role: { in: ["MEMBER", "COORDINATOR"] },
       ...(filter === "pending" ? { status: "PENDING" } : {}),
     },
     select: {
@@ -37,6 +37,16 @@ export default async function MembresPage({
     PENDING: "bg-yellow-100 text-yellow-800",
     ACTIVE: "bg-green-100 text-green-800",
     INACTIVE: "bg-gray-100 text-gray-600",
+  }
+
+  const roleLabel: Record<string, string> = {
+    MEMBER: "Membre",
+    COORDINATOR: "Coordinateur",
+  }
+
+  const roleColors: Record<string, string> = {
+    MEMBER: "bg-blue-100 text-blue-700",
+    COORDINATOR: "bg-purple-100 text-purple-700",
   }
 
   return (
@@ -73,9 +83,14 @@ export default async function MembresPage({
                     <p className="text-xs text-gray-400">{user.commune}</p>
                   )}
                 </div>
-                <span className={`shrink-0 inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[user.status]}`}>
-                  {statusLabel[user.status]}
-                </span>
+                <div className="shrink-0 flex flex-col items-end gap-1">
+                  <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[user.status]}`}>
+                    {statusLabel[user.status]}
+                  </span>
+                  <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${roleColors[user.role]}`}>
+                    {roleLabel[user.role]}
+                  </span>
+                </div>
               </div>
               <div className="flex items-center justify-between">
                 <p className="text-xs text-gray-400">Inscrit le {formatDate(user.createdAt)}</p>
@@ -104,6 +119,7 @@ export default async function MembresPage({
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Nom</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Email</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Commune</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-600">Rôle</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Inscrit le</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Statut</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Actions</th>
@@ -115,6 +131,11 @@ export default async function MembresPage({
                   <td className="px-4 py-3 font-medium text-gray-900">{fullName(user)}</td>
                   <td className="px-4 py-3 text-gray-600">{user.email}</td>
                   <td className="px-4 py-3 text-gray-600">{user.commune ?? "—"}</td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${roleColors[user.role]}`}>
+                      {roleLabel[user.role]}
+                    </span>
+                  </td>
                   <td className="px-4 py-3 text-gray-600">{formatDate(user.createdAt)}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[user.status]}`}>
@@ -136,7 +157,7 @@ export default async function MembresPage({
               ))}
               {users.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
+                  <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
                     Aucun membre trouvé.
                   </td>
                 </tr>

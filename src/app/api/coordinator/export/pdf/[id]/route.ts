@@ -73,13 +73,29 @@ export async function GET(
       },
     })
 
-    const grandTotal = data.memberOrders.reduce((sum, mo) => sum + mo.total, 0)
-
-    // Total général
-    const finalY = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6
+    // Récapitulatif financier
+    let finalY = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6
     doc.setFontSize(11)
     doc.setFont("helvetica", "bold")
-    doc.text(`TOTAL GÉNÉRAL : ${formatCurrency(grandTotal)}`, 14, finalY)
+    doc.text(`TOTAL GÉNÉRAL : ${formatCurrency(data.totalMembers)}`, 14, finalY)
+
+    finalY += 7
+    doc.setFontSize(10)
+    doc.setFont("helvetica", "normal")
+    doc.text(`Total producteur : ${formatCurrency(data.totalProducerGoods)}`, 14, finalY)
+
+    finalY += 6
+    doc.text(`Total transport : ${formatCurrency(data.transportCompensation)}`, 14, finalY)
+
+    finalY += 6
+    doc.text(`Dont encaissé (statut "Payé") : ${formatCurrency(data.totalCollected)}`, 14, finalY)
+
+    finalY += 7
+    doc.setFont("helvetica", "bold")
+    const balanceLabel = data.balance >= 0 ? "Solde restant" : "Solde manquant"
+    if (data.balance < 0) doc.setTextColor(200, 0, 0)
+    doc.text(`${balanceLabel} : ${formatCurrency(Math.abs(data.balance))}`, 14, finalY)
+    doc.setTextColor(0, 0, 0)
 
     const buffer = Buffer.from(doc.output("arraybuffer"))
 

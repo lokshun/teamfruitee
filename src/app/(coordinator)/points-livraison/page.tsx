@@ -32,7 +32,7 @@ export default async function PointsLivraisonPage() {
               </div>
               <div className="flex items-center justify-between">
                 <p className="text-xs text-gray-400">{point._count.memberOrders} utilisation(s)</p>
-                <DeliveryPointForm point={point} />
+                <DeliveryPointForm point={point} otherPoints={points} />
               </div>
             </div>
           ))}
@@ -67,7 +67,7 @@ export default async function PointsLivraisonPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <DeliveryPointForm point={point} />
+                    <DeliveryPointForm point={point} otherPoints={points} />
                   </td>
                 </tr>
               ))}

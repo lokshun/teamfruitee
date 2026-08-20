@@ -307,6 +307,13 @@ export default async function GroupOrderDetailPage({
                   <div className="flex items-center gap-3">
                     <p className="font-bold text-gray-900">{formatCurrency(Number(mo.totalAmount))}</p>
                     <PaymentStatusToggle orderId={mo.id} currentStatus={mo.paymentStatus} />
+                    <Link
+                      href={`/commandes-groupees/${id}/commandes/${mo.id}`}
+                      className="px-2 py-1 text-xs font-medium bg-gray-50 text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-100"
+                      title="Modifier cette commande (ex : produit non fourni par le producteur)"
+                    >
+                      Modifier
+                    </Link>
                   </div>
                 </div>
                 <div className="text-sm text-gray-600 space-y-0.5">

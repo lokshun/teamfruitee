@@ -137,15 +137,26 @@ export async function DELETE(
 
   const { id } = await params
 
+  const existing = await prisma.groupOrder.findUnique({ where: { id }, select: { status: true } })
+  if (!existing) {
+    return NextResponse.json({ error: "Commande introuvable" }, { status: 404 })
+  }
+
   const orderCount = await prisma.memberOrder.count({ where: { groupOrderId: id } })
-  if (orderCount > 0) {
+  if (orderCount > 0 && existing.status !== "DELIVERED") {
     return NextResponse.json(
       { error: "Cette commande groupée contient des commandes membres et ne peut pas être supprimée." },
       { status: 409 }
     )
   }
 
-  await prisma.groupOrder.delete({ where: { id } })
+  await prisma.$transaction(async (tx) => {
+    await tx.orderLine.deleteMany({ where: { memberOrder: { groupOrderId: id } } })
+    await tx.memberOrder.deleteMany({ where: { groupOrderId: id } })
+    await tx.groupOrderProduct.deleteMany({ where: { groupOrderId: id } })
+    await tx.groupOrder.delete({ where: { id } })
+  })
+
   return NextResponse.json({ success: true })
 }
 

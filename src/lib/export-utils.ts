@@ -14,9 +14,19 @@ export interface GroupOrderExportData {
       quantity: number
       unitPrice: number
       lineTotal: number
+      producerGoodsUnitPrice: number
+      producerGoodsLineTotal: number
+      producerLineTotal: number
     }>
     total: number
+    paymentStatus: string
   }>
+  totalMembers: number
+  totalCollected: number
+  totalProducerGoods: number
+  totalProducer: number
+  transportCompensation: number
+  balance: number
 }
 
 export async function getGroupOrderExportData(groupOrderId: string): Promise<GroupOrderExportData | null> {
@@ -31,7 +41,7 @@ export async function getGroupOrderExportData(groupOrderId: string): Promise<Gro
           orderLines: {
             include: {
               groupOrderProduct: {
-                include: { product: { select: { name: true } } },
+                include: { product: { select: { name: true, priceProducer: true, priceWithTransport: true } } },
               },
             },
           },
@@ -42,22 +52,54 @@ export async function getGroupOrderExportData(groupOrderId: string): Promise<Gro
 
   if (!groupOrder) return null
 
-  return {
-    title: groupOrder.title,
-    producerName: groupOrder.producer.name,
-    deliveryDate: groupOrder.deliveryDate,
-    memberOrders: groupOrder.memberOrders.map((mo) => ({
-      memberName: mo.user ? ([mo.user.firstName, mo.user.lastName].filter(Boolean).join(" ").trim() || mo.proxyBuyerName || "Acheteur") : (mo.proxyBuyerName ?? "Acheteur"),
-      commune: mo.user?.commune ?? null,
-      deliveryPoint: mo.deliveryPoint.name,
-      lines: mo.orderLines.map((ol) => ({
+  const memberOrders = groupOrder.memberOrders.map((mo) => ({
+    memberName: mo.user ? ([mo.user.firstName, mo.user.lastName].filter(Boolean).join(" ").trim() || mo.proxyBuyerName || "Acheteur") : (mo.proxyBuyerName ?? "Acheteur"),
+    commune: mo.user?.commune ?? null,
+    deliveryPoint: mo.deliveryPoint.name,
+    lines: mo.orderLines.map((ol) => {
+      const producerGoodsUnitPrice = Number(ol.groupOrderProduct.product.priceProducer)
+      const producerUnitPrice = Number(ol.groupOrderProduct.product.priceWithTransport)
+      return {
         productName: ol.groupOrderProduct.product.name,
         quantity: ol.quantity,
         unitPrice: Number(ol.unitPrice),
         lineTotal: Number(ol.lineTotal),
-      })),
-      total: Number(mo.totalAmount),
-    })),
+        producerGoodsUnitPrice,
+        producerGoodsLineTotal: producerGoodsUnitPrice * ol.quantity,
+        // Montant facturé par le producteur, transport de sa part inclus
+        producerLineTotal: producerUnitPrice * ol.quantity,
+      }
+    }),
+    total: Number(mo.totalAmount),
+    paymentStatus: mo.paymentStatus,
+  }))
+
+  const totalMembers = memberOrders.reduce((sum, mo) => sum + mo.total, 0)
+  const totalCollected = memberOrders
+    .filter((mo) => mo.paymentStatus === "PAID")
+    .reduce((sum, mo) => sum + mo.total, 0)
+  const totalProducerGoods = memberOrders.reduce(
+    (sum, mo) => sum + mo.lines.reduce((s, l) => s + l.producerGoodsLineTotal, 0),
+    0
+  )
+  // Total réellement facturé par le producteur (marchandise + transport à sa charge)
+  const totalProducer = memberOrders.reduce(
+    (sum, mo) => sum + mo.lines.reduce((s, l) => s + l.producerLineTotal, 0),
+    0
+  )
+  const transportCompensation = totalProducer - totalProducerGoods
+
+  return {
+    title: groupOrder.title,
+    producerName: groupOrder.producer.name,
+    deliveryDate: groupOrder.deliveryDate,
+    memberOrders,
+    totalMembers,
+    totalCollected,
+    totalProducerGoods,
+    totalProducer,
+    transportCompensation,
+    balance: totalCollected - totalProducer,
   }
 }
 

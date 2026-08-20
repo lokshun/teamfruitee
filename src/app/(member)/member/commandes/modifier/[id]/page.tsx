@@ -71,7 +71,22 @@ export default async function ModifierCommandePage({
       ) : (
         <MemberOrderEditForm
           memberOrderId={id}
-          groupOrder={memberOrder.groupOrder}
+          groupOrder={{
+            id: memberOrder.groupOrder.id,
+            products: memberOrder.groupOrder.products.map((gop) => ({
+              id: gop.id,
+              priceOverride: gop.priceOverride !== null ? Number(gop.priceOverride) : null,
+              product: {
+                name: gop.product.name,
+                description: gop.product.description,
+                packagingType: gop.product.packagingType,
+                measureUnit: gop.product.measureUnit,
+                unitQuantity: gop.product.unitQuantity,
+                unitsPerPackage: gop.product.unitsPerPackage,
+                priceWithTransport: Number(gop.product.priceWithTransport),
+              },
+            })),
+          }}
           deliveryPoints={deliveryPoints}
           paymentReferents={memberOrder.groupOrder.paymentReferents}
           initialQuantities={initialQuantities}

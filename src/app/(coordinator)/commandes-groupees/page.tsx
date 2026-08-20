@@ -68,7 +68,7 @@ export default async function CommandesGroupeesPage({
               <GroupOrderStatusActions
                 groupOrderId={go.id}
                 currentStatus={go.status}
-                canDelete={go._count.memberOrders === 0}
+                canDelete={go._count.memberOrders === 0 || go.status === "DELIVERED"}
               />
             </div>
           ))}
@@ -118,7 +118,7 @@ export default async function CommandesGroupeesPage({
                     <GroupOrderStatusActions
                       groupOrderId={go.id}
                       currentStatus={go.status}
-                      canDelete={go._count.memberOrders === 0}
+                      canDelete={go._count.memberOrders === 0 || go.status === "DELIVERED"}
                     />
                   </td>
                 </tr>

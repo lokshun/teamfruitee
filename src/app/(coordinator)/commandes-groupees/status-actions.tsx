@@ -8,8 +8,11 @@ import { Pencil, Trash2 } from "lucide-react"
 const transitions: Record<string, { label: string; next: string }[]> = {
   DRAFT: [{ label: "Ouvrir", next: "OPEN" }],
   OPEN: [{ label: "Clôturer", next: "CLOSED" }],
-  CLOSED: [{ label: "Livré", next: "DELIVERED" }],
-  DELIVERED: [],
+  CLOSED: [
+    { label: "Livré", next: "DELIVERED" },
+    { label: "Rouvrir", next: "OPEN" },
+  ],
+  DELIVERED: [{ label: "Annuler livraison", next: "CLOSED" }],
 }
 
 export function GroupOrderStatusActions({

@@ -11,7 +11,7 @@ export default async function MembresPage({
 
   const users = await prisma.user.findMany({
     where: {
-      role: { in: ["MEMBER", "COORDINATOR"] },
+      role: { in: ["MEMBER", "COORDINATOR", "PRODUCER"] },
       ...(filter === "pending" ? { status: "PENDING" } : {}),
     },
     select: {
@@ -42,11 +42,13 @@ export default async function MembresPage({
   const roleLabel: Record<string, string> = {
     MEMBER: "Membre",
     COORDINATOR: "Coordinateur",
+    PRODUCER: "Producteur",
   }
 
   const roleColors: Record<string, string> = {
     MEMBER: "bg-blue-100 text-blue-700",
     COORDINATOR: "bg-purple-100 text-purple-700",
+    PRODUCER: "bg-amber-100 text-amber-700",
   }
 
   return (
